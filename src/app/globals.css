@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-petrol-50: #eef7f9;
+  --color-petrol-100: #d5ecf1;
+  --color-petrol-200: #aad8e3;
+  --color-petrol-300: #74bccf;
+  --color-petrol-400: #3f9bb3;
+  --color-petrol-500: #1f7d96;
+  --color-petrol-600: #12647b;
+  --color-petrol-700: #0f5165;
+  --color-petrol-800: #0e4353;
+  --color-petrol-900: #0b3644;
+  --color-petrol-950: #072530;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-petrol-500 focus:ring-2 focus:ring-petrol-200 disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-petrol-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-petrol-700 disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+  .td {
+    @apply px-4 py-3 text-sm text-slate-700;
+  }
+}
