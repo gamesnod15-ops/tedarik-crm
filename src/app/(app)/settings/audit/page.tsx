@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AutoForm } from "@/components/auto-form";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { ACTION_LABELS, actionLabel } from "@/lib/audit";
@@ -31,13 +32,13 @@ export default async function AuditPage({
   const qs = (p: number) => `?${new URLSearchParams({ ...(action && { action }), page: String(p) })}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <header>
         <h2 className="text-lg font-semibold">Denetim Kayıtları</h2>
         <p className="text-sm text-slate-500">{total} kayıt.</p>
       </header>
 
-      <form className="card flex items-end gap-3 p-4">
+      <AutoForm className="toolbar">
         <div>
           <label className="label" htmlFor="action">İşlem</label>
           <select id="action" name="action" defaultValue={action ?? ""} className="input">
@@ -45,8 +46,8 @@ export default async function AuditPage({
             {Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
-        <button className="btn-secondary">Filtrele</button>
-      </form>
+        <button className="sr-only">Filtrele</button>
+      </AutoForm>
 
       <div className="card overflow-x-auto">
         <table className="w-full">

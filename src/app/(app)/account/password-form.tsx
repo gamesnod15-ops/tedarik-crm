@@ -1,10 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useToast } from "@/components/toast";
 import { changePasswordAction, type PasswordState } from "./actions";
 
 export function PasswordForm() {
+  const toast = useToast();
   const [state, action, pending] = useActionState<PasswordState, FormData>(changePasswordAction, undefined);
+
+  useEffect(() => {
+    if (state?.ok) toast.success(state.ok);
+    if (state?.error) toast.error(state.error);
+  }, [state, toast]);
 
   return (
     <form action={action} className="space-y-4">

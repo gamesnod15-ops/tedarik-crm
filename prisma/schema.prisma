@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url       = env("DATABASE_URL")          // uygulama: havuzlu (pooled) adres
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // uygulama: havuzlu (pooled) adres
   directUrl = env("DATABASE_URL_UNPOOLED") // migration: doğrudan adres
 }
 
@@ -13,20 +13,21 @@ enum Role {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  role         Role      @default(ADMIN)
-  isActive     Boolean   @default(true)
-  mustChangePassword Boolean @default(false)
-  failedLogins Int       @default(0)
-  lockedUntil  DateTime?
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String
+  passwordHash       String
+  role               Role      @default(ADMIN)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  auditLogs AuditLog[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
 
   @@index([role])
 }
@@ -45,4 +46,235 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@index([userId])
+}
+
+// ───────────────────────── Cari / Sipariş / Kasa / Personel ─────────────────────────
+// Para alanları Decimal: kuruş hatası olmaz. Bakiyeler tabloda saklanmaz, kayıtlardan hesaplanır.
+
+enum CariTipi {
+  MUSTERI
+  TEDARIKCI
+}
+
+enum IslemTipi {
+  TAHSILAT // müşteriden alınan
+  ODEME // tedarikçiye yapılan
+}
+
+enum OdemeSekli {
+  NAKIT
+  HAVALE_EFT
+  CEK
+  SENET
+  KREDI_KARTI
+  DIGER
+}
+
+enum PersonelDurum {
+  AKTIF
+  PASIF
+}
+
+enum HareketTuru {
+  GIRIS_CIKIS
+  IZIN
+}
+
+enum IzinTuru {
+  YILLIK
+  RAPORLU
+  UCRETSIZ
+  MAZERET
+  DIGER
+}
+
+// Müşteri veya tedarikçi (tek tablo, tipiyle ayrılır).
+model Cari {
+  id             String   @id @default(cuid())
+  tipi           CariTipi
+  unvan          String
+  yetkili        String?
+  telefon        String?
+  eposta         String?
+  adres          String?
+  // Devreden bakiye. Müşteri için + = müşteri bize borçlu; tedarikçi için + = biz borçluyuz.
+  acilisBakiyesi Decimal  @default(0) @db.Decimal(14, 2)
+  notlar         String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  siparisler Siparis[]
+  alimlar    Alim[]
+  odemeler   Odeme[]
+
+  @@index([tipi])
+  @@index([unvan])
+}
+
+model Urun {
+  id         String   @id @default(cuid())
+  ad         String
+  birim      String   @default("Adet")
+  birimFiyat Decimal  @default(0) @db.Decimal(14, 2) // varsayılan; siparişte kalem bazında kaydedilir
+  kdvOrani   Int
+  aciklama   String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  kalemler SiparisKalem[]
+
+  @@index([ad])
+}
+
+// Müşteri siparişi (çok kalemli). Tedarikçi alımları için basit "Alim" kaydı kullanılır.
+enum SiparisDurumu {
+  BEKLIYOR
+  HAZIRLANIYOR
+  TESLIM_EDILDI
+  FATURALANDI
+  IPTAL
+}
+
+model Siparis {
+  id        String        @id @default(cuid())
+  no        Int           @unique @default(autoincrement())
+  tarih     DateTime      @db.Date
+  cariId    String
+  cari      Cari          @relation(fields: [cariId], references: [id], onDelete: Restrict)
+  aciklama  String?
+  durum     SiparisDurumu @default(BEKLIYOR)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  kalemler SiparisKalem[]
+
+  @@index([tarih])
+  @@index([cariId])
+  @@index([durum])
+}
+
+// Fiyat ve KDV, sipariş anındaki değerle burada saklanır (ürün fiyatı sonradan değişse de eski sipariş bozulmaz).
+// Satır toplamı = adet × birimFiyat; KDV üstüne eklenir: toplam × kdvOrani / 100.
+model SiparisKalem {
+  id         String  @id @default(cuid())
+  siparisId  String
+  siparis    Siparis @relation(fields: [siparisId], references: [id], onDelete: Cascade)
+  urunId     String
+  urun       Urun    @relation(fields: [urunId], references: [id], onDelete: Restrict)
+  adet       Decimal @db.Decimal(14, 3)
+  birimFiyat Decimal @db.Decimal(14, 2)
+  kdvOrani   Int
+  aciklama   String?
+
+  @@index([siparisId])
+  @@index([urunId])
+}
+
+// Tahsilat (müşteri) ve ödeme (tedarikçi).
+model Odeme {
+  id         String     @id @default(cuid())
+  tarih      DateTime   @db.Date
+  cariId     String
+  cari       Cari       @relation(fields: [cariId], references: [id], onDelete: Restrict)
+  islemTipi  IslemTipi
+  tutar      Decimal    @db.Decimal(14, 2)
+  odemeSekli OdemeSekli @default(NAKIT)
+  aciklama   String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([tarih])
+  @@index([cariId])
+}
+
+model Masraf {
+  id         String      @id @default(cuid())
+  tarih      DateTime    @db.Date
+  kategori   String?
+  aciklama   String
+  tutar      Decimal     @db.Decimal(14, 2)
+  odemeSekli OdemeSekli?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([tarih])
+  @@index([kategori])
+}
+
+model Personel {
+  id             String        @id @default(cuid())
+  adSoyad        String
+  sicilNo        String        @unique
+  departman      String?
+  telefon        String?
+  iseGirisTarihi DateTime      @db.Date
+  durum          PersonelDurum @default(AKTIF)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  hareketler PersonelHareket[]
+
+  @@index([durum])
+}
+
+// Giriş-çıkış saatleri ve izinler. Saatler "HH:mm" metni olarak tutulur.
+model PersonelHareket {
+  id            String      @id @default(cuid())
+  personelId    String
+  personel      Personel    @relation(fields: [personelId], references: [id], onDelete: Cascade)
+  islemTuru     HareketTuru
+  tarih         DateTime    @db.Date
+  girisSaati    String?
+  cikisSaati    String?
+  izinTuru      IzinTuru?
+  izinBaslangic DateTime?   @db.Date
+  izinBitis     DateTime?   @db.Date
+  aciklama      String?
+  createdAt     DateTime    @default(now())
+
+  @@index([personelId, tarih])
+  @@index([tarih])
+}
+
+enum BildirimTuru {
+  BILGI
+  BASARI
+  UYARI
+  HATA
+}
+
+// Uygulama içi bildirim (zil ikonu). Her kayıt tek bir alıcıya aittir; okundu bilgisi alıcıya özeldir.
+model Notification {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tur       BildirimTuru @default(BILGI)
+  baslik    String
+  mesaj     String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+// Malzemeci (tedarikçi) günlük alım kaydı: tarih, fatura no, miktar ve KDV dahil toplam yeterlidir.
+model Alim {
+  id        String   @id @default(cuid())
+  tarih     DateTime @db.Date
+  cariId    String
+  cari      Cari     @relation(fields: [cariId], references: [id], onDelete: Restrict)
+  faturaNo  String?
+  aciklama  String?
+  miktar    Decimal? @db.Decimal(14, 3)
+  toplam    Decimal  @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tarih])
+  @@index([cariId, tarih])
+  @@index([faturaNo])
 }

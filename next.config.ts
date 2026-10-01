@@ -1,7 +1,15 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+
+// Sürüm numarası package.json'dan alınır; Vercel'de yayın yapılan commit'in kısa kodu da eklenir.
+const { version } = JSON.parse(readFileSync("./package.json", "utf8")) as { version: string };
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
+    NEXT_PUBLIC_APP_BUILD: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
+  },
   async headers() {
     return [
       {

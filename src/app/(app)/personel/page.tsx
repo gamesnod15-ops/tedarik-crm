@@ -1,0 +1,321 @@
+import Link from "next/link";
+import { SearchInput } from "@/components/search-input";
+import { AutoForm } from "@/components/auto-form";
+import type { Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
+import { can, requireUser } from "@/lib/session";
+import { formatDate, parseDateInput, toDateInput } from "@/lib/format";
+import { PAGE_SIZE, pageOf } from "@/lib/crud";
+import { Pager } from "@/components/pager";
+import { QueryTabs } from "@/components/query-tabs";
+import { RecordDialog } from "@/components/record-dialog";
+import { DeleteButton } from "@/components/delete-button";
+import type { Field } from "@/components/entity-form";
+import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
+
+type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; page?: string };
+
+const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
+const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
+
+const personelFields: Field[] = [
+  { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
+  { name: "sicilNo", label: "Sicil no", required: true, half: true, placeholder: "Ör. 1024" },
+  { name: "departman", label: "Departman", half: true, placeholder: "Ör. Üretim" },
+  { name: "telefon", label: "Telefon", type: "tel", half: true, placeholder: "0532 123 45 67" },
+  { name: "iseGirisTarihi", label: "İşe giriş tarihi", type: "date", required: true, half: true },
+  {
+    name: "durum",
+    label: "Durum",
+    type: "select",
+    required: true,
+    half: true,
+    options: [
+      { value: "AKTIF", label: "Aktif" },
+      { value: "PASIF", label: "Pasif" },
+    ],
+  },
+];
+
+function hareketFields(personelOptions: { value: string; label: string }[]): Field[] {
+  return [
+    { name: "personelId", label: "Personel", type: "select", required: true, options: personelOptions, placeholder: "Personel seçin…" },
+    {
+      name: "islemTuru",
+      label: "İşlem türü",
+      type: "select",
+      required: true,
+      half: true,
+      options: Object.entries(TUR_LABELS).map(([value, label]) => ({ value, label })),
+    },
+    { name: "tarih", label: "Tarih", type: "date", required: true, half: true },
+    { name: "girisSaati", label: "Giriş saati", type: "time", half: true, required: true, showIf: { field: "islemTuru", in: ["GIRIS_CIKIS"] } },
+    { name: "cikisSaati", label: "Çıkış saati", type: "time", half: true, showIf: { field: "islemTuru", in: ["GIRIS_CIKIS"] } },
+    {
+      name: "izinTuru",
+      label: "İzin türü",
+      type: "select",
+      required: true,
+      options: Object.entries(IZIN_LABELS).map(([value, label]) => ({ value, label })),
+      showIf: { field: "islemTuru", in: ["IZIN"] },
+    },
+    { name: "izinBaslangic", label: "İzin başlangıç tarihi", type: "date", half: true, required: true, showIf: { field: "islemTuru", in: ["IZIN"] } },
+    { name: "izinBitis", label: "İzin bitiş tarihi", type: "date", half: true, required: true, showIf: { field: "islemTuru", in: ["IZIN"] } },
+    { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
+  ];
+}
+
+async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
+  const where: Prisma.PersonelWhereInput = {
+    ...(sp.q && {
+      OR: [
+        { adSoyad: { contains: sp.q, mode: "insensitive" } },
+        { sicilNo: { contains: sp.q, mode: "insensitive" } },
+        { departman: { contains: sp.q, mode: "insensitive" } },
+      ],
+    }),
+    ...((sp.durum === "AKTIF" || sp.durum === "PASIF") && { durum: sp.durum }),
+  };
+  const [rows, total] = await Promise.all([
+    db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    db.personel.count({ where }),
+  ]);
+
+  return (
+    <>
+      <AutoForm className="toolbar">
+        <input type="hidden" name="tip" value="KART" />
+        <SearchInput defaultValue={sp.q ?? ""} placeholder="Ad, sicil no veya departman" className="w-72" />
+        <div>
+          <label className="label" htmlFor="durum">Durum</label>
+          <select id="durum" name="durum" defaultValue={sp.durum ?? ""} className="input">
+            <option value="">Tümü</option>
+            <option value="AKTIF">Aktif</option>
+            <option value="PASIF">Pasif</option>
+          </select>
+        </div>
+        <button className="sr-only">Filtrele</button>
+        {(sp.q || sp.durum) && <Link href="?tip=KART" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+      </AutoForm>
+
+      <div className="card overflow-x-auto">
+        <table className="w-full">
+          <thead className="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th className="th">Ad soyad</th>
+              <th className="th">Sicil no</th>
+              <th className="th">Departman</th>
+              <th className="th">Telefon</th>
+              <th className="th">İşe giriş</th>
+              <th className="th">Durum</th>
+              <th className="th" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.map((p) => (
+              <tr key={p.id}>
+                <td className="td font-medium text-slate-900">{p.adSoyad}</td>
+                <td className="td font-mono text-xs">{p.sicilNo}</td>
+                <td className="td">{p.departman ?? "—"}</td>
+                <td className="td">{p.telefon ?? "—"}</td>
+                <td className="td whitespace-nowrap">{formatDate(p.iseGirisTarihi)}</td>
+                <td className="td">
+                  <span className={`badge ${p.durum === "AKTIF" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{p.durum === "AKTIF" ? "Aktif" : "Pasif"}</span>
+                </td>
+                <td className="td">
+                  {canWrite && (
+                    <div className="flex items-center justify-end gap-4">
+                      <RecordDialog
+                        variant="link"
+                        label="Düzenle"
+                        title="Personel düzenle"
+                        fields={personelFields}
+                        hidden={{ id: p.id }}
+                        initial={{
+                          adSoyad: p.adSoyad,
+                          sicilNo: p.sicilNo,
+                          departman: p.departman ?? "",
+                          telefon: p.telefon ?? "",
+                          iseGirisTarihi: toDateInput(p.iseGirisTarihi),
+                          durum: p.durum,
+                        }}
+                        action={savePersonelAction}
+                      />
+                      <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir. Silmek yerine pasife alabilirsiniz.`} />
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "KART", q: sp.q, durum: sp.durum }} />
+    </>
+  );
+}
+
+async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
+  const from = parseDateInput(sp.from);
+  const to = parseDateInput(sp.to);
+  const where: Prisma.PersonelHareketWhereInput = {
+    ...(sp.personel && { personelId: sp.personel }),
+    ...((sp.tur === "GIRIS_CIKIS" || sp.tur === "IZIN") && { islemTuru: sp.tur }),
+    ...((from || to) && { tarih: { ...(from && { gte: from }), ...(to && { lte: to }) } }),
+  };
+  const [rows, total, personeller] = await Promise.all([
+    db.personelHareket.findMany({
+      where,
+      orderBy: [{ tarih: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { personel: { select: { adSoyad: true } } },
+    }),
+    db.personelHareket.count({ where }),
+    db.personel.findMany({ orderBy: { adSoyad: "asc" }, select: { id: true, adSoyad: true, sicilNo: true, durum: true } }),
+  ]);
+  const options = personeller.map((p) => ({ value: p.id, label: `${p.adSoyad} (${p.sicilNo})${p.durum === "PASIF" ? " – pasif" : ""}` }));
+  const fields = hareketFields(options);
+  const hasFilter = !!(sp.personel || sp.tur || sp.from || sp.to);
+
+  return (
+    <>
+      <div className="flex justify-end">
+        {canWrite && (
+          <RecordDialog
+            label="Yeni hareket"
+            title="Yeni iş hareketi"
+            fields={fields}
+            initial={{ islemTuru: "GIRIS_CIKIS", tarih: toDateInput(new Date()) }}
+            action={saveHareketAction}
+          />
+        )}
+      </div>
+
+      <AutoForm className="toolbar">
+        <input type="hidden" name="tip" value="HAREKET" />
+        <div className="min-w-48">
+          <label className="label" htmlFor="personel">Personel</label>
+          <select id="personel" name="personel" defaultValue={sp.personel ?? ""} className="input">
+            <option value="">Tümü</option>
+            {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="tur">Tür</label>
+          <select id="tur" name="tur" defaultValue={sp.tur ?? ""} className="input">
+            <option value="">Tümü</option>
+            <option value="GIRIS_CIKIS">Giriş / Çıkış</option>
+            <option value="IZIN">İzin</option>
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="from">Tarih</label>
+          <input id="from" name="from" type="date" defaultValue={sp.from} aria-label="Başlangıç tarihi" className="input" />
+          <span aria-hidden="true" className="text-slate-400">–</span>
+          <input id="to" name="to" type="date" defaultValue={sp.to} aria-label="Bitiş tarihi" className="input" />
+        </div>
+        <button className="sr-only">Filtrele</button>
+        {hasFilter && <Link href="?tip=HAREKET" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+      </AutoForm>
+
+      <div className="card overflow-x-auto">
+        <table className="w-full">
+          <thead className="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th className="th">Tarih</th>
+              <th className="th">Personel</th>
+              <th className="th">Tür</th>
+              <th className="th">Ayrıntı</th>
+              <th className="th">Açıklama</th>
+              <th className="th" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.map((h) => (
+              <tr key={h.id}>
+                <td className="td whitespace-nowrap">{formatDate(h.tarih)}</td>
+                <td className="td font-medium text-slate-900">{h.personel.adSoyad}</td>
+                <td className="td">
+                  <span className={`badge ${h.islemTuru === "IZIN" ? "bg-amber-50 text-amber-700" : "bg-petrol-50 text-petrol-700"}`}>{TUR_LABELS[h.islemTuru]}</span>
+                </td>
+                <td className="td">
+                  {h.islemTuru === "GIRIS_CIKIS"
+                    ? `${h.girisSaati ?? "—"} → ${h.cikisSaati ?? "—"}`
+                    : `${h.izinTuru ? IZIN_LABELS[h.izinTuru] : "İzin"}: ${formatDate(h.izinBaslangic)} – ${formatDate(h.izinBitis)}`}
+                </td>
+                <td className="td max-w-xs truncate text-slate-500" title={h.aciklama ?? ""}>{h.aciklama ?? "—"}</td>
+                <td className="td">
+                  {canWrite && (
+                    <div className="flex items-center justify-end gap-4">
+                      <RecordDialog
+                        variant="link"
+                        label="Düzenle"
+                        title="İş hareketi düzenle"
+                        fields={fields}
+                        hidden={{ id: h.id }}
+                        initial={{
+                          personelId: h.personelId,
+                          islemTuru: h.islemTuru,
+                          tarih: toDateInput(h.tarih),
+                          girisSaati: h.girisSaati ?? "",
+                          cikisSaati: h.cikisSaati ?? "",
+                          izinTuru: h.izinTuru ?? "",
+                          izinBaslangic: toDateInput(h.izinBaslangic),
+                          izinBitis: toDateInput(h.izinBitis),
+                          aciklama: h.aciklama ?? "",
+                        }}
+                        action={saveHareketAction}
+                      />
+                      <DeleteButton action={deleteHareketAction} id={h.id} />
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "HAREKET", personel: sp.personel, tur: sp.tur, from: sp.from, to: sp.to }} />
+    </>
+  );
+}
+
+export default async function PersonelPage({ searchParams }: { searchParams: Promise<SP> }) {
+  const user = await requireUser("personel:read");
+  const sp = await searchParams;
+  const tip = sp.tip === "HAREKET" ? "HAREKET" : "KART";
+  const page = pageOf(sp.page);
+  const canWrite = can(user, "personel:write");
+
+  return (
+    <div className="space-y-3">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Personel</h1>
+        <QueryTabs
+          param="tip"
+          items={[
+            { value: "KART", label: "Personel Kartları" },
+            { value: "HAREKET", label: "İş Hareketleri" },
+          ]}
+        />
+        </div>
+        {canWrite && tip === "KART" && (
+          <RecordDialog
+            label="Yeni personel"
+            title="Yeni personel"
+            fields={personelFields}
+            initial={{ durum: "AKTIF", iseGirisTarihi: toDateInput(new Date()) }}
+            action={savePersonelAction}
+          />
+        )}
+      </header>
+
+
+      {tip === "KART" ? <PersonelKartlari sp={sp} page={page} canWrite={canWrite} /> : <IsHareketleri sp={sp} page={page} canWrite={canWrite} />}
+    </div>
+  );
+}

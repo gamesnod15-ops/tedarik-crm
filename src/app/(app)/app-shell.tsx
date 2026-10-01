@@ -3,11 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
 import { signOutAction } from "./sign-out";
 
-export type ShellUser = { name: string; title: string; initials: string; canSettings: boolean };
+export type NavIcon = "home" | "users" | "package" | "orders" | "wallet" | "badge" | "chart";
+export type NavLink = { href: string; label: string; icon: NavIcon };
+export type ShellUser = { name: string; title: string; initials: string; canSettings: boolean; nav: NavLink[] };
 
 const STORAGE_KEY = "ovox.sidebar.collapsed";
+const VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
+const BUILD = process.env.NEXT_PUBLIC_APP_BUILD ?? "";
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +24,12 @@ function Icon({ children }: { children: React.ReactNode }) {
 
 const icons = {
   home: <Icon><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></Icon>,
+  users: <Icon><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7" /><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5" /></Icon>,
+  package: <Icon><path d="M21 8l-9-5-9 5 9 5 9-5z" /><path d="M3 8v8l9 5 9-5V8" /><path d="M12 13v8" /></Icon>,
+  orders: <Icon><path d="M6 3h12l2 5H4z" /><path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></Icon>,
+  wallet: <Icon><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2" /><circle cx="16.5" cy="14.5" r="1" /></Icon>,
+  badge: <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><circle cx="12" cy="10" r="2.5" /><path d="M7.5 17a4.5 4.5 0 0 1 9 0" /></Icon>,
+  chart: <Icon><path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-7" /><path d="M22 20H2" /></Icon>,
   settings: (
     <Icon>
       <circle cx="12" cy="12" r="3" />
@@ -30,7 +41,15 @@ const icons = {
   panel: <Icon><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /></Icon>,
 };
 
-export function AppShell({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+export function AppShell({
+  user,
+  notifications,
+  children,
+}: {
+  user: ShellUser;
+  notifications: { unread: number; items: NotificationItem[] };
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -67,9 +86,11 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
     });
   }
 
-  const links = [
-    { href: "/", label: "Özet", icon: icons.home, active: pathname === "/" },
-  ];
+  const links = user.nav.map((l) => ({
+    ...l,
+    icon: icons[l.icon],
+    active: l.href === "/" ? pathname === "/" : pathname.startsWith(l.href),
+  }));
 
   const iconBtn =
     "flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-petrol-700";
@@ -77,14 +98,14 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   return (
     <div className="flex min-h-screen">
       <aside
-        className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white text-slate-600 transition-[width] duration-200 ${
+        className={`sticky top-0 flex h-screen shrink-0 flex-col print:hidden border-r border-slate-200 bg-white text-slate-600 transition-[width] duration-200 ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
         <div className="flex h-14 shrink-0 items-center border-b border-slate-200 px-4">
-          <Link href="/" className="flex items-center" aria-label="Ovox CRM">
+          <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Ovox CRM">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {collapsed ? <img src="/ovox-crm-mark.svg" alt="Ovox CRM" className="mx-auto h-4 w-auto" /> : <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto" />}
+            {collapsed ? <img src="/ovox-crm-collapsed.svg" alt="Ovox CRM" className="h-7 w-auto" /> : <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto" />}
           </Link>
         </div>
           <nav aria-label="Ana menü" className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -104,10 +125,32 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
               </Link>
             ))}
           </nav>
+
+        <footer className="shrink-0 border-t border-slate-200 px-3 py-3 text-center">
+          {collapsed ? (
+            <p
+              className="text-[10px] leading-tight text-slate-400"
+              title={`Ovox Dijital tarafından geliştirildi. © ${new Date().getFullYear()} · Versiyon ${VERSION}`}
+            >
+              v{VERSION}
+            </p>
+          ) : (
+            <div className="space-y-0.5 text-[11px] leading-snug text-slate-500">
+              <p>
+                <span className="font-medium text-slate-600">Ovox Dijital</span> tarafından geliştirildi.
+              </p>
+              <p>© {new Date().getFullYear()} Tüm hakları saklıdır.</p>
+              <p className="pt-1 text-slate-400">
+                Versiyon {VERSION}
+                {BUILD && <span className="text-slate-300"> · {BUILD}</span>}
+              </p>
+            </div>
+          )}
+        </footer>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4">
+      <header className="sticky top-0 z-20 flex h-14 print:hidden items-center gap-3 border-b border-slate-200 bg-white px-4">
         <button
           type="button"
           onClick={toggle}
@@ -130,9 +173,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
               {icons.settings}
             </Link>
           )}
-          <button type="button" className={iconBtn} aria-label="Bildirimler" title="Bildirimler">
-            {icons.bell}
-          </button>
+          {user.nav.length > 0 && <NotificationBell unread={notifications.unread} items={notifications.items} />}
 
           <div ref={menuRef} className="relative ml-2">
             <button
@@ -176,7 +217,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
         </div>
       </header>
 
-      <main className="min-w-0 flex-1 p-5">
+      <main className="min-w-0 flex-1 p-5 print:p-0">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
       </div>

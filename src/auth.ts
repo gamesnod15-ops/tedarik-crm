@@ -6,6 +6,7 @@ import { encode } from "next-auth/jwt";
 import { authConfig, REMEMBER_DAYS, SESSION_HOURS } from "./auth.config";
 import { db } from "./lib/db";
 import { audit } from "./lib/audit";
+import { notify } from "./lib/notify";
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
@@ -63,7 +64,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 lockedUntil: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
               },
             });
-            if (lock) await audit({ userId: user.id, action: "auth.locked", meta: { email } });
+            if (lock) {
+              await audit({ userId: user.id, action: "auth.locked", meta: { email } });
+              await notify({
+                toAdmins: true,
+                tur: "UYARI",
+                baslik: "Hesap kilitlendi",
+                mesaj: `${user.name} (${email}) çok sayıda hatalı girişten sonra ${LOCK_MINUTES} dakika kilitlendi.`,
+                href: `/settings/users/${user.id}`,
+              });
+            }
           }
           await audit({
             userId: user.id,

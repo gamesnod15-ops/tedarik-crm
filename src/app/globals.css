@@ -40,9 +40,39 @@
     @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
   }
   .th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+    @apply whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
   }
   .td {
-    @apply px-4 py-3 text-sm text-slate-700;
+    @apply px-4 py-2.5 text-sm text-slate-700;
   }
+
+  /* Liste sayfalarındaki filtre çubuğu: tek satır, etiketler girişin yanında, az yer kaplar. */
+  .toolbar {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-2;
+  }
+  .toolbar > div {
+    @apply flex items-center gap-2;
+  }
+  .toolbar .label {
+    @apply mb-0 whitespace-nowrap text-xs font-medium text-slate-500;
+  }
+  .toolbar .input {
+    @apply h-9 py-0 text-sm;
+  }
+  .toolbar .btn-secondary,
+  .toolbar .btn-primary {
+    @apply py-1.5;
+  }
+  .toolbar input[type="date"],
+  .toolbar input[type="month"] {
+    width: 8.75rem;
+  }
+  .toolbar select {
+    width: auto;
+  }
+}
+
+/* Katmanlı (@layer) olmadığı için Tailwind'in genel .flex-1 sınıfını ezer: arama kutusu satırı doldurmaz. */
+.toolbar > .flex-1 {
+  flex: 0 1 17rem;
 }

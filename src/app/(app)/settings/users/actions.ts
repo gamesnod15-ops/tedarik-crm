@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { notify } from "@/lib/notify";
 import { requireUser } from "@/lib/session";
 
 export type ActionState = { error?: string; ok?: string } | undefined;
@@ -41,6 +42,14 @@ export async function createUserAction(_prev: ActionState, formData: FormData): 
     data: { name, email, role: "ADMIN", passwordHash: await bcrypt.hash(password, 12), mustChangePassword: true },
   });
   await audit({ userId: actor.id, action: "user.create", entity: "User", entityId: user.id, meta: { email } });
+
+  await notify({
+    toAdmins: true,
+    exceptUserId: actor.id,
+    baslik: "Yeni kullanıcı oluşturuldu",
+    mesaj: `${actor.name}, ${name} (${email}) hesabını oluşturdu.`,
+    href: `/settings/users/${user.id}`,
+  });
 
   revalidatePath("/settings/users");
   redirect("/settings/users");

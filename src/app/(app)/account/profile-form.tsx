@@ -1,10 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useToast } from "@/components/toast";
 import { updateProfileAction, type ProfileState } from "./actions";
 
 export function ProfileForm({ name, email }: { name: string; email: string }) {
+  const toast = useToast();
   const [state, action, pending] = useActionState<ProfileState, FormData>(updateProfileAction, undefined);
+
+  useEffect(() => {
+    if (state?.ok) toast.success(state.ok);
+    if (state?.error) toast.error(state.error);
+  }, [state, toast]);
 
   return (
     <form action={action} className="space-y-4">

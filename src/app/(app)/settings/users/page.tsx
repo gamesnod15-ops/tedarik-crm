@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { SearchInput } from "@/components/search-input";
+import { AutoForm } from "@/components/auto-form";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
@@ -27,7 +29,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const canWrite = can(actor, "users:write");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Kullanıcılar</h2>
@@ -38,11 +40,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         )}
       </header>
 
-      <form className="card flex flex-wrap items-end gap-3 p-4">
-        <div className="min-w-56 flex-1">
-          <label className="label" htmlFor="q">Ara</label>
-          <input id="q" name="q" defaultValue={q} placeholder="Ad veya e-posta" className="input" />
-        </div>
+      <AutoForm className="toolbar">
+        <SearchInput defaultValue={q ?? ""} placeholder="Ad veya e-posta" className="w-72" />
         <div>
           <label className="label" htmlFor="status">Durum</label>
           <select id="status" name="status" defaultValue={status ?? ""} className="input">
@@ -51,8 +50,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             <option value="inactive">Pasif</option>
           </select>
         </div>
-        <button className="btn-secondary">Filtrele</button>
-      </form>
+        <button className="sr-only">Filtrele</button>
+      </AutoForm>
 
       <div className="card overflow-x-auto">
         <table className="w-full">
