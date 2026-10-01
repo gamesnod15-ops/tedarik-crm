@@ -20,11 +20,13 @@ npm run dev
 ## Canlıya alma
 
 1. **Canlı PostgreSQL** hazırlayın ve bağlantı adresini alın (`postgresql://kullanıcı:şifre@host:5432/db?schema=public&sslmode=require`).
-2. **Sunucunun ortam değişkenlerine** [.env.example](.env.example) sonundaki canlı bölümünü girin: `DATABASE_URL`, `AUTH_SECRET` (yerelden farklı), `AUTH_URL`, `AUTH_TRUST_HOST`.
+2. **Sunucunun ortam değişkenlerine** [.env.example](.env.example) sonundaki canlı bölümünü girin: `DATABASE_URL` ve `DATABASE_URL_UNPOOLED` (Neon entegrasyonu kendisi ekler), `AUTH_SECRET` (yerelden farklı), `AUTH_URL`, `AUTH_TRUST_HOST`.
 3. **Migration'ı kendi bilgisayarınızdan** canlı veritabanına uygulayın (Windows PowerShell):
 
    ```powershell
-   $env:DATABASE_URL = "postgresql://kullanıcı:şifre@host:5432/db?schema=public&sslmode=require"
+   # Vercel > Settings > Environment Variables'tan iki değeri kopyalayın:
+   $env:DATABASE_URL = "<havuzlu adres>"
+   $env:DATABASE_URL_UNPOOLED = "<doğrudan (unpooled) adres>"
    npm run db:status      # hangi migration'lar uygulanmış/bekliyor
    npm run db:deploy      # bekleyenleri uygular (veri silmez, sadece migration dosyalarını çalıştırır)
    ```
@@ -37,7 +39,7 @@ npm run dev
    npm run db:seed
    ```
 
-   Seed ile oluşan yönetici ilk girişte şifresini değiştirmek zorundadır. İşiniz bitince aynı oturumda `Remove-Item Env:DATABASE_URL` yazın; yoksa sonraki komutlar yanlışlıkla canlıya gider.
+   Seed ile oluşan yönetici ilk girişte şifresini değiştirmek zorundadır. İşiniz bitince aynı oturumda `Remove-Item Env:DATABASE_URL, Env:DATABASE_URL_UNPOOLED` yazın; yoksa sonraki komutlar yanlışlıkla canlıya gider.
 4. **Uygulamayı derleyip başlatın** (sunucuda): `npm ci && npm run build && npm start` (varsayılan port 3000; başına nginx/Caddy gibi bir HTTPS proxy koyun).
 
 ### Şema değişikliği yaparken
