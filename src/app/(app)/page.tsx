@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { getBakiyeler, getOzet, siparisToplam } from "@/lib/finance";
+import { getVadesiGecenAlacaklar } from "@/lib/alacak";
 import { formatDate, formatMoney, monthStartInput, parseDateInput, todayInput } from "@/lib/format";
 import { ISLEM_TIPI_LABELS } from "./finans/fields";
 
@@ -29,7 +30,7 @@ export default async function OzetPage() {
   const from = parseDateInput(monthStartInput())!;
   const to = parseDateInput(todayInput())!;
 
-  const [ozet, cariler, sonSiparisler, sonAlimlar, sonOdemeler, acik] = await Promise.all([
+  const [ozet, cariler, sonSiparisler, sonAlimlar, sonOdemeler, acik, vadesiGecenler] = await Promise.all([
     getOzet(from, to),
     db.cari.findMany({ select: { id: true, tipi: true } }),
     db.siparis.findMany({
@@ -40,6 +41,7 @@ export default async function OzetPage() {
     db.alim.findMany({ orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: 5, include: { cari: { select: { id: true, unvan: true } } } }),
     db.odeme.findMany({ orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: 5, include: { cari: { select: { id: true, unvan: true } } } }),
     db.siparis.groupBy({ by: ["durum"], where: { durum: { in: ["BEKLIYOR", "HAZIRLANIYOR"] } }, _count: { _all: true } }),
+    getVadesiGecenAlacaklar(),
   ]);
 
   const sonHareketler = [
@@ -87,6 +89,40 @@ export default async function OzetPage() {
         <Link href="/siparisler?tip=MUSTERI&durum=HAZIRLANIYOR" className="badge bg-sky-50 px-3 py-1 text-sky-700 hover:bg-sky-100">
           Hazırlanıyor · {acik.find((a) => a.durum === "HAZIRLANIYOR")?._count._all ?? 0}
         </Link>
+      </section>
+
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
+          <h2 className="text-sm font-semibold">
+            Vadesi geçen alacaklar
+            {vadesiGecenler.length > 0 && <span className="ml-2 badge bg-red-50 text-red-700">{vadesiGecenler.length} müşteri</span>}
+          </h2>
+          {vadesiGecenler.length > 0 && (
+            <span className="text-sm text-slate-500">
+              Toplam: <span className="font-semibold tabular-nums text-red-700">{formatMoney(vadesiGecenler.reduce((t, v) => t + Number(v.gecikmis.toString()), 0))}</span>
+            </span>
+          )}
+        </div>
+        {vadesiGecenler.length === 0 ? (
+          <p className="px-5 py-6 text-center text-sm text-slate-400">Vadesi geçen alacak yok.</p>
+        ) : (
+          <table className="w-full">
+            <tbody className="divide-y divide-slate-100">
+              {vadesiGecenler.slice(0, 6).map((v) => (
+                <tr key={v.cariId}>
+                  <td className="td">
+                    <Link href={`/cariler/${v.cariId}`} className="font-medium text-slate-900 hover:underline">{v.unvan}</Link>
+                  </td>
+                  <td className="td text-slate-500">
+                    {v.enEskiGecikmeGun > 0 ? `${v.enEskiGecikmeGun} gün gecikmiş` : "Devreden bakiye"} · vade {v.vadeGunu} gün
+                  </td>
+                  <td className="td text-right font-semibold tabular-nums text-red-700">{formatMoney(v.gecikmis)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {vadesiGecenler.length > 6 && <p className="border-t border-slate-100 px-5 py-2 text-xs text-slate-500">+{vadesiGecenler.length - 6} müşteri daha. Cariler sayfasından tümüne bakın.</p>}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">

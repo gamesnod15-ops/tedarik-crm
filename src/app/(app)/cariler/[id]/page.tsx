@@ -7,7 +7,8 @@ import { formatDate, formatMoney, formatQty, todayInput } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
 import { RecordDialog } from "@/components/record-dialog";
 import { saveCariAction } from "../actions";
-import { CARI_TIP_LABELS, cariFields } from "../fields";
+import { CARI_TIP_LABELS, cariFieldsFor } from "../fields";
+import { getVadesiGecenCari } from "@/lib/alacak";
 import { saveOdemeAction } from "../../finans/actions";
 import { odemeFieldsForCari } from "../../finans/fields";
 import { saveAlimAction, saveSiparisAction } from "../../siparisler/actions";
@@ -54,6 +55,8 @@ export default async function CariDetayPage({
 
   const urunler = canOrder && musteri ? (await loadSiparisFormData("MUSTERI")).urunler : [];
 
+  const vadesiGecen = musteri ? await getVadesiGecenCari(cari.id) : null;
+
   const bakiye = ekstre.sonBakiye;
   const bakiyeLabel = musteri ? (bakiye.isNegative() ? "Müşteri alacaklı" : "Kalan (alacağımız)") : bakiye.isNegative() ? "Tedarikçi bize borçlu" : "Kalan (borcumuz)";
   const aylik = donem.tip === "AY";
@@ -78,6 +81,7 @@ export default async function CariDetayPage({
             {cari.adres && <p className="text-sm text-slate-500">{cari.adres}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <Link href={`/api/ekstre/${cari.id}?ay=${donemKey(donem)}`} prefetch={false} className="btn-secondary">PDF indir</Link>
             <PrintButton label="Ekstreyi yazdır" />
             {canOrder && musteri && (
               <YeniSiparisDialog cari={{ id: cari.id, unvan: cari.unvan }} urunler={urunler} bugun={todayInput()} action={saveSiparisAction} />
@@ -109,7 +113,7 @@ export default async function CariDetayPage({
                 variant="primary"
                 label="Düzenle"
                 title={`${label} düzenle`}
-                fields={cariFields}
+                fields={cariFieldsFor(cari.tipi)}
                 hidden={{ id: cari.id, tipi: cari.tipi }}
                 initial={{
                   unvan: cari.unvan,
@@ -118,6 +122,7 @@ export default async function CariDetayPage({
                   eposta: cari.eposta ?? "",
                   adres: cari.adres ?? "",
                   acilisBakiyesi: cari.acilisBakiyesi.toString(),
+                  vadeGunu: cari.vadeGunu?.toString() ?? "",
                   notlar: cari.notlar ?? "",
                   isActive: cari.isActive ? "on" : "",
                 }}
@@ -157,6 +162,16 @@ export default async function CariDetayPage({
         <Stat label={musteri ? "Dönem tahsilatı" : "Dönem ödemesi"} value={formatMoney(ekstre.toplamOdeme)} />
         <Stat label={bakiyeLabel} value={formatMoney(bakiye.abs())} hint={aylik ? "Sonraki aya devreden" : undefined} tone={bakiye.isZero() ? "text-slate-900" : "text-petrol-700"} />
       </section>
+
+      {vadesiGecen && (
+        <div role="alert" className="flex flex-wrap items-center gap-x-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 print:hidden">
+          <span className="font-semibold">Vadesi geçmiş alacak: {formatMoney(vadesiGecen.gecikmis)}</span>
+          <span>
+            {vadesiGecen.enEskiGecikmeGun > 0 ? `En eski kalem ${vadesiGecen.enEskiGecikmeGun} gün gecikmiş. ` : "Devreden bakiye ödenmemiş. "}
+            Vade: {vadesiGecen.vadeGunu} gün · Toplam açık alacak: {formatMoney(vadesiGecen.acikAlacak)}
+          </span>
+        </div>
+      )}
 
       {cari.notlar && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{cari.notlar}</p>

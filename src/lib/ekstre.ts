@@ -139,3 +139,14 @@ export async function getEkstre(cariId: string, donem: Donem) {
     sonBakiye: bakiye,
   };
 }
+
+/** Bir tipteki (müşteri/tedarikçi) tüm aktif carilerin dönem ekstreleri; hareketi ya da bakiyesi olmayanlar atlanır. */
+export async function getEkstreler(tipi: "MUSTERI" | "TEDARIKCI", donem: Donem, limit = 300) {
+  const cariler = await db.cari.findMany({ where: { tipi, isActive: true }, orderBy: { unvan: "asc" }, select: { id: true }, take: limit });
+  const sonuc: NonNullable<Awaited<ReturnType<typeof getEkstre>>>[] = [];
+  for (let i = 0; i < cariler.length; i += 10) {
+    const grup = await Promise.all(cariler.slice(i, i + 10).map((c) => getEkstre(c.id, donem)));
+    for (const e of grup) if (e && (e.satirlar.length > 0 || !e.devreden.isZero())) sonuc.push(e);
+  }
+  return sonuc;
+}

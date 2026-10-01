@@ -32,7 +32,7 @@ export function Modal({
         if (e.target === ref.current) onClose();
       }}
       aria-label={title}
-      className={`m-auto w-full ${size === "xl" ? "max-w-5xl" : "max-w-xl"} rounded-xl border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-slate-900/40`}
+      className={`m-auto w-full ${size === "xl" ? "max-w-5xl" : "max-w-xl"} rounded-xl border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-black/50`}
     >
       {open && (
         <div className="max-h-[85vh] overflow-y-auto p-6">

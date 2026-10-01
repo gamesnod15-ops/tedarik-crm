@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "./sign-out";
 
-export type NavIcon = "home" | "users" | "package" | "orders" | "wallet" | "badge" | "chart";
+export type NavIcon = "home" | "users" | "package" | "orders" | "wallet" | "badge" | "chart" | "cart" | "receipt";
 export type NavLink = { href: string; label: string; icon: NavIcon };
-export type ShellUser = { name: string; title: string; initials: string; canSettings: boolean; nav: NavLink[] };
+export type ShellUser = { name: string; title: string; initials: string; canSettings: boolean; nav: NavLink[]; quick: NavLink[] };
 
 const STORAGE_KEY = "ovox.sidebar.collapsed";
 const VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0";
@@ -29,6 +30,8 @@ const icons = {
   orders: <Icon><path d="M6 3h12l2 5H4z" /><path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></Icon>,
   wallet: <Icon><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2" /><circle cx="16.5" cy="14.5" r="1" /></Icon>,
   badge: <Icon><rect x="4" y="3" width="16" height="18" rx="2" /><circle cx="12" cy="10" r="2.5" /><path d="M7.5 17a4.5 4.5 0 0 1 9 0" /></Icon>,
+  cart: <Icon><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /><path d="M2.5 3.5h2.7l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.1a1.6 1.6 0 0 0 1.6-1.2L20.5 8H6" /></Icon>,
+  receipt: <Icon><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></Icon>,
   chart: <Icon><path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-7" /><path d="M22 20H2" /></Icon>,
   settings: (
     <Icon>
@@ -105,7 +108,17 @@ export function AppShell({
         <div className="flex h-14 shrink-0 items-center border-b border-slate-200 px-4">
           <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Ovox CRM">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {collapsed ? <img src="/ovox-crm-collapsed.svg" alt="Ovox CRM" className="h-7 w-auto" /> : <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto" />}
+            {collapsed ? (
+              <>
+                <img src="/ovox-crm-collapsed.svg" alt="Ovox CRM" className="h-7 w-auto dark:hidden" />
+                <img src="/ovox-crm-collapsed-dark.svg" alt="Ovox CRM" className="hidden h-7 w-auto dark:block" />
+              </>
+            ) : (
+              <>
+                <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto dark:hidden" />
+                <img src="/ovox-crm-logo-dark.svg" alt="Ovox CRM" className="hidden h-4 w-auto dark:block" />
+              </>
+            )}
           </Link>
         </div>
           <nav aria-label="Ana menü" className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -124,6 +137,39 @@ export function AppShell({
                 {!collapsed && <span className="truncate">{l.label}</span>}
               </Link>
             ))}
+
+          {user.quick.length > 0 && (
+            <div className="pt-3" aria-label="Hızlı erişim" role="group">
+              {collapsed ? (
+                <div className="mx-2 mb-2 border-t border-slate-200" />
+              ) : (
+                <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Hızlı erişim</p>
+              )}
+              <div className="space-y-0.5">
+                {user.quick.map((q) => (
+                  <Link
+                    key={q.href}
+                    href={q.href}
+                    title={collapsed ? q.label : undefined}
+                    aria-label={q.label}
+                    className={`group flex items-center gap-3 rounded-lg px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-100 hover:text-petrol-700 ${
+                      collapsed ? "justify-center px-0" : ""
+                    }`}
+                  >
+                    <span className="relative shrink-0">
+                      {icons[q.icon]}
+                      <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-petrol-600 text-[#fff] ring-2 ring-white group-hover:bg-petrol-500">
+                        <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden="true">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </span>
+                    </span>
+                    {!collapsed && <span className="truncate">{q.label}</span>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           </nav>
 
         <footer className="shrink-0 border-t border-slate-200 px-3 py-3 text-center">
@@ -168,6 +214,7 @@ export function AppShell({
         </form>
 
         <div className="ml-auto flex items-center gap-1">
+          <ThemeToggle className={iconBtn} />
           {user.canSettings && (
             <Link href="/settings" className={iconBtn} aria-label="Ayarlar" title="Ayarlar">
               {icons.settings}

@@ -17,7 +17,7 @@ import { DURUMLAR, DURUM_BADGE, DURUM_LABELS, isDurum } from "./durum";
 import { DurumSelect } from "./durum-select";
 import { alimFields } from "./alim-fields";
 
-type SP = { tip?: string; from?: string; to?: string; q?: string; durum?: string; page?: string };
+type SP = { tip?: string; from?: string; to?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
 function DateFilters({ sp, tip }: { sp: SP; tip: string }) {
   return (
@@ -63,7 +63,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
       <div className="flex flex-wrap items-center gap-1.5" aria-label="Duruma göre filtrele">
         <Link
           href={`?${new URLSearchParams({ tip, ...(sp.q && { q: sp.q }), ...(sp.from && { from: sp.from }), ...(sp.to && { to: sp.to }) })}`}
-          className={`badge px-2 py-0.5 ${!durum ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          className={`badge px-2 py-0.5 ${!durum ? "bg-slate-900 text-slate-50" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
         >
           Tümü
         </Link>
@@ -121,6 +121,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
                   <td className="td">
                     {canWrite && (
                       <div className="flex items-center justify-end gap-4">
+                        <Link href={`/siparisler/yeni?kopya=${s.id}`} className="text-sm font-medium text-slate-600 hover:underline" title="Bu siparişin aynısını yeni sipariş olarak aç">Kopyala</Link>
                         <Link href={`/siparisler/${s.id}`} className="text-sm font-medium text-petrol-700 hover:underline">Düzenle</Link>
                         <DeleteButton action={deleteSiparisAction} id={s.id} confirmText={`#${s.no} numaralı ${label} silinsin mi? Kalemleri de silinir.`} />
                       </div>
@@ -173,6 +174,7 @@ async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWr
         </p>
         {canWrite && (
           <RecordDialog
+            autoOpen={sp.yeni === "1"}
             label="Yeni alım"
             title="Yeni tedarikçi alımı"
             fields={fields}

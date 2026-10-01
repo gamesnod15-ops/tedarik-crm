@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/session";
-import { getOzet, siparisToplam } from "@/lib/finance";
+import { getRapor, RAPOR_LIMIT } from "@/lib/rapor";
+import { donemAdi, donemKey, getEkstreler, parseDonem } from "@/lib/ekstre";
 import { formatDate, formatMoney, monthStartInput, parseDateInput, todayInput } from "@/lib/format";
+import { AutoForm } from "@/components/auto-form";
 import { PrintButton } from "@/components/print-button";
-import { ISLEM_TIPI_LABELS, ODEME_SEKLI_LABELS } from "../finans/fields";
+import { QueryTabs } from "@/components/query-tabs";
 
-type SP = { from?: string; to?: string };
-const LIMIT = 500;
+type SP = { tip?: string; from?: string; to?: string; ay?: string; cari?: string };
 
 function Box({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -18,106 +19,45 @@ function Box({ label, value, tone }: { label: string; value: string; tone?: stri
   );
 }
 
-export default async function RaporlarPage({ searchParams }: { searchParams: Promise<SP> }) {
-  await requireUser("raporlar:read");
-  const sp = await searchParams;
+const pdfBtn = "btn-secondary gap-2 print:hidden";
+const PdfIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
+  </svg>
+);
+
+async function GenelRapor({ sp }: { sp: SP }) {
   const fromStr = parseDateInput(sp.from) ? sp.from! : monthStartInput();
   const toStr = parseDateInput(sp.to) ? sp.to! : todayInput();
   const from = parseDateInput(fromStr)!;
   const to = parseDateInput(toStr)!;
-  const aralik = { gte: from, lte: to };
-
-  const [ozet, siparisler, masraflar, odemeler, alimlar] = await Promise.all([
-    getOzet(from, to),
-    db.siparis.findMany({
-      where: { tarih: aralik, durum: { not: "IPTAL" } },
-      orderBy: [{ tarih: "asc" }, { no: "asc" }],
-      take: LIMIT,
-      include: { cari: { select: { unvan: true, tipi: true } }, kalemler: { include: { urun: { select: { ad: true } } } } },
-    }),
-    db.masraf.findMany({ where: { tarih: aralik }, orderBy: [{ tarih: "asc" }, { createdAt: "asc" }], take: LIMIT }),
-    db.odeme.findMany({
-      where: { tarih: aralik },
-      orderBy: [{ tarih: "asc" }, { createdAt: "asc" }],
-      take: LIMIT,
-      include: { cari: { select: { unvan: true } } },
-    }),
-    db.alim.findMany({
-      where: { tarih: aralik },
-      orderBy: [{ tarih: "asc" }, { createdAt: "asc" }],
-      take: LIMIT,
-      include: { cari: { select: { unvan: true } } },
-    }),
-  ]);
-
-  // Tutar işareti nakit yönünü gösterir: gelir (+) / gider (−).
-  const satirlar = [
-    ...siparisler.map((s) => {
-      const toplam = siparisToplam(s.kalemler);
-      const musteri = s.cari.tipi === "MUSTERI";
-      return {
-        key: `s${s.id}`,
-        tarih: s.tarih,
-        tur: musteri ? "Müşteri Siparişi" : "Tedarikçi Alımı",
-        ad: s.cari.unvan,
-        aciklama: [...new Set(s.kalemler.map((k) => k.urun.ad))].join(", "),
-        tutar: musteri ? toplam : toplam.neg(),
-      };
-    }),
-    ...alimlar.map((a) => ({
-      key: `a${a.id}`,
-      tarih: a.tarih,
-      tur: "Tedarikçi Alımı",
-      ad: a.cari.unvan,
-      aciklama: [a.faturaNo && `Fatura: ${a.faturaNo}`, a.aciklama].filter(Boolean).join(" · "),
-      tutar: a.toplam.neg(),
-    })),
-    ...masraflar.map((m) => ({
-      key: `m${m.id}`,
-      tarih: m.tarih,
-      tur: "Gider",
-      ad: m.aciklama,
-      aciklama: m.kategori ?? "",
-      tutar: m.tutar.neg(),
-    })),
-    ...odemeler.map((o) => ({
-      key: `o${o.id}`,
-      tarih: o.tarih,
-      tur: ISLEM_TIPI_LABELS[o.islemTipi],
-      ad: o.cari.unvan,
-      aciklama: ODEME_SEKLI_LABELS[o.odemeSekli],
-      tutar: o.islemTipi === "TAHSILAT" ? o.tutar : o.tutar.neg(),
-    })),
-  ]
-    .sort((a, b) => a.tarih.getTime() - b.tarih.getTime())
-    .slice(0, LIMIT);
-
-  const kesildi = [siparisler, masraflar, odemeler, alimlar].some((l) => l.length === LIMIT);
+  const { ozet, satirlar, kesildi } = await getRapor(from, to);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Genel Finans ve Hareket Raporu</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            {formatDate(from)} – {formatDate(to)} arası
-          </p>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <AutoForm className="toolbar print:hidden">
+          <input type="hidden" name="tip" value="GENEL" />
+          <div>
+            <label className="label" htmlFor="from">Tarih</label>
+            <input id="from" name="from" type="date" defaultValue={fromStr} aria-label="Başlangıç tarihi" className="input" />
+            <span aria-hidden="true" className="text-slate-400">–</span>
+            <input id="to" name="to" type="date" defaultValue={toStr} aria-label="Bitiş tarihi" className="input" />
+          </div>
+          <button className="sr-only">Raporu hazırla</button>
+          <Link href="/raporlar?tip=GENEL" className="text-sm text-slate-500 hover:underline">Bu ay</Link>
+        </AutoForm>
+        <div className="flex items-center gap-2">
+          <Link href={`/api/rapor?from=${fromStr}&to=${toStr}`} className={pdfBtn} prefetch={false}>
+            <PdfIcon /> PDF indir
+          </Link>
+          <PrintButton label="Yazdır" />
         </div>
-        <PrintButton />
-      </header>
+      </div>
 
-      <form className="toolbar print:hidden">
-        <div>
-          <label className="label" htmlFor="from">Başlangıç tarihi</label>
-          <input id="from" name="from" type="date" defaultValue={fromStr} className="input" />
-        </div>
-        <div>
-          <label className="label" htmlFor="to">Bitiş tarihi</label>
-          <input id="to" name="to" type="date" defaultValue={toStr} className="input" />
-        </div>
-        <button className="btn-primary">Raporu hazırla</button>
-        <Link href="/raporlar" className="text-sm text-slate-500 hover:underline">Bu ay</Link>
-      </form>
+      <p className="text-sm text-slate-500">
+        {formatDate(from)} – {formatDate(to)} arası
+      </p>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Box label="Toplam ciro" value={formatMoney(ozet.ciro)} />
@@ -152,7 +92,123 @@ export default async function RaporlarPage({ searchParams }: { searchParams: Pro
           </tbody>
         </table>
       </section>
-      {kesildi && <p className="text-xs text-amber-700">Listede en fazla {LIMIT} kayıt gösterilir; özet kutuları tüm kayıtları kapsar. Tarih aralığını daraltın.</p>}
+      {kesildi && <p className="text-xs text-amber-700">Listede en fazla {RAPOR_LIMIT} kayıt gösterilir; özet kutuları tüm kayıtları kapsar. Tarih aralığını daraltın.</p>}
+    </>
+  );
+}
+
+async function AySonuEkstreleri({ sp }: { sp: SP }) {
+  const tipi = sp.cari === "TEDARIKCI" ? "TEDARIKCI" : "MUSTERI";
+  const donem = parseDonem(sp.ay, "AY");
+  const ay = donemKey(donem);
+  const ekstreler = await getEkstreler(tipi, donem);
+  const musteri = tipi === "MUSTERI";
+
+  const sifir = new Prisma.Decimal(0);
+  const toplam = ekstreler.reduce(
+    (t, e) => ({ devreden: t.devreden.add(e.devreden), borc: t.borc.add(e.toplamBorclanma), odeme: t.odeme.add(e.toplamOdeme), bakiye: t.bakiye.add(e.sonBakiye) }),
+    { devreden: sifir, borc: sifir, odeme: sifir, bakiye: sifir },
+  );
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <AutoForm className="toolbar print:hidden">
+          <input type="hidden" name="tip" value="EKSTRE" />
+          <div>
+            <label className="label" htmlFor="ay">Ay</label>
+            <input id="ay" name="ay" type="month" defaultValue={ay} className="input" />
+          </div>
+          <div>
+            <label className="label" htmlFor="cari">Cari tipi</label>
+            <select id="cari" name="cari" defaultValue={tipi} className="input">
+              <option value="MUSTERI">Müşteriler</option>
+              <option value="TEDARIKCI">Tedarikçiler</option>
+            </select>
+          </div>
+          <button className="sr-only">Göster</button>
+        </AutoForm>
+        <div className="flex items-center gap-2">
+          {ekstreler.length > 0 && (
+            <Link href={`/api/ekstre/toplu?ay=${ay}&tip=${tipi}`} className="btn-primary gap-2 print:hidden" prefetch={false}>
+              <PdfIcon /> Tümünü tek PDF indir ({ekstreler.length})
+            </Link>
+          )}
+          <PrintButton label="Yazdır" />
+        </div>
+      </div>
+
+      <p className="text-sm text-slate-500">
+        {donemAdi(donem)} · {musteri ? "Müşteri" : "Tedarikçi"} ekstreleri. Devreden bakiye, önceki aylardaki tüm kayıtlardan hesaplanır.
+      </p>
+
+      <section className="card overflow-x-auto">
+        <table className="w-full">
+          <thead className="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th className="th">{musteri ? "Müşteri" : "Tedarikçi"}</th>
+              <th className="th text-right">Devreden</th>
+              <th className="th text-right">{musteri ? "Dönem siparişi" : "Dönem alımı"}</th>
+              <th className="th text-right">{musteri ? "Dönem tahsilatı" : "Dönem ödemesi"}</th>
+              <th className="th text-right">{musteri ? "Dönem sonu (alacağımız)" : "Dönem sonu (borcumuz)"}</th>
+              <th className="th print:hidden" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {ekstreler.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Bu dönemde hareketi ya da bakiyesi olan kayıt yok.</td></tr>}
+            {ekstreler.map((e) => (
+              <tr key={e.cari.id}>
+                <td className="td">
+                  <Link href={`/cariler/${e.cari.id}?ay=${ay}`} className="font-medium text-petrol-700 hover:underline">{e.cari.unvan}</Link>
+                </td>
+                <td className="td text-right tabular-nums">{formatMoney(e.devreden)}</td>
+                <td className="td text-right tabular-nums">{formatMoney(e.toplamBorclanma)}</td>
+                <td className="td text-right tabular-nums">{formatMoney(e.toplamOdeme)}</td>
+                <td className="td text-right font-semibold tabular-nums">{formatMoney(e.sonBakiye)}</td>
+                <td className="td text-right print:hidden">
+                  <Link href={`/api/ekstre/${e.cari.id}?ay=${ay}`} className="text-sm font-medium text-petrol-700 hover:underline" prefetch={false}>PDF</Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          {ekstreler.length > 0 && (
+            <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+              <tr>
+                <td className="td font-semibold">Toplam ({ekstreler.length} kayıt)</td>
+                <td className="td text-right font-semibold tabular-nums">{formatMoney(toplam.devreden)}</td>
+                <td className="td text-right font-semibold tabular-nums">{formatMoney(toplam.borc)}</td>
+                <td className="td text-right font-semibold tabular-nums">{formatMoney(toplam.odeme)}</td>
+                <td className="td text-right font-semibold tabular-nums">{formatMoney(toplam.bakiye)}</td>
+                <td className="td print:hidden" />
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </section>
+    </>
+  );
+}
+
+export default async function RaporlarPage({ searchParams }: { searchParams: Promise<SP> }) {
+  await requireUser("raporlar:read");
+  const sp = await searchParams;
+  const tip = sp.tip === "EKSTRE" ? "EKSTRE" : "GENEL";
+
+  return (
+    <div className="space-y-3">
+      <header className="flex flex-wrap items-center gap-x-5 gap-y-2 print:hidden">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Raporlar</h1>
+        <QueryTabs
+          param="tip"
+          items={[
+            { value: "GENEL", label: "Finans Raporu" },
+            { value: "EKSTRE", label: "Ay Sonu Ekstreleri" },
+          ]}
+        />
+      </header>
+      <h1 className="hidden text-xl font-semibold print:block">{tip === "GENEL" ? "Genel Finans ve Hareket Raporu" : "Ay Sonu Ekstreleri"}</h1>
+
+      {tip === "GENEL" ? <GenelRapor sp={sp} /> : <AySonuEkstreleri sp={sp} />}
     </div>
   );
 }

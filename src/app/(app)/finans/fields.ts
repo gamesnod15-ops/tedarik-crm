@@ -63,3 +63,12 @@ export const masrafFields: Field[] = [
   { name: "kategori", label: "Kategori", half: true, placeholder: "Ör. Ulaşım" },
   { name: "odemeSekli", label: "Ödeme şekli", type: "select", half: true, options: sekliOptions, placeholder: "Belirtilmedi" },
 ];
+
+export const tekrarFields: Field[] = [
+  { name: "aciklama", label: "Açıklama", required: true, placeholder: "Ör. Dükkan kirası, elektrik" },
+  { name: "tutar", label: "Tutar (TL)", type: "number", required: true, half: true, placeholder: "0,00" },
+  { name: "gun", label: "Ayın günü", type: "number", step: "1", required: true, half: true, placeholder: "1-28", hint: "Her ay bu günde oluşur. Kısa aylarda ayın son günü kullanılır." },
+  { name: "kategori", label: "Kategori", half: true, placeholder: "Ör. Kira" },
+  { name: "odemeSekli", label: "Ödeme şekli", type: "select", half: true, options: sekliOptions, placeholder: "Belirtilmedi" },
+  { name: "isActive", label: "Aktif (her ay otomatik oluşsun)", type: "checkbox" },
+];

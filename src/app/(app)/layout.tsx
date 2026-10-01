@@ -35,6 +35,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         db.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 15 }),
       ]);
 
+  // Hızlı erişim: en sık yapılan "yeni kayıt" işlemleri (yetkiye göre). ?yeni=1 ile ilgili ekleme penceresi açılır.
+  const quick: NavLink[] = [];
+  if (can(user, "siparisler:write")) quick.push({ href: "/siparisler/yeni", label: "Yeni sipariş", icon: "orders" });
+  if (can(user, "cariler:write")) quick.push({ href: "/cariler?tip=MUSTERI&yeni=1", label: "Yeni müşteri", icon: "users" });
+  if (can(user, "finans:write")) quick.push({ href: "/finans?tip=ODEME&yeni=1", label: "Tahsilat / ödeme", icon: "wallet" });
+  if (can(user, "siparisler:write")) quick.push({ href: "/siparisler?tip=TEDARIKCI&yeni=1", label: "Yeni alım", icon: "cart" });
+  if (can(user, "finans:write")) quick.push({ href: "/finans?tip=MASRAF&yeni=1", label: "Yeni masraf", icon: "receipt" });
+  if (can(user, "siparisler:write")) quick.push({ href: "/urunler?yeni=1", label: "Yeni ürün", icon: "package" });
+
   return (
     <ToastProvider>
       <Suspense>
@@ -47,6 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         initials: initials(user.name),
         canSettings: can(user, "admin:access") && !user.mustChangePassword,
         nav: user.mustChangePassword ? [] : nav,
+        quick: user.mustChangePassword ? [] : quick,
       }}
       notifications={{
         unread,

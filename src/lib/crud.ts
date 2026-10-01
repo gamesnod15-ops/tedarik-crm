@@ -173,6 +173,22 @@ export const optEmail = (label = "E-posta") =>
       return v;
     });
 
+/** İsteğe bağlı tam sayı (ör. vade günü); boşsa null. */
+export const optInt = (label: string, min: number, max: number) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return null;
+      const n = Number(v.replace(",", "."));
+      if (!Number.isInteger(n) || n < min || n > max) {
+        ctx.addIssue({ code: "custom", message: `${label} ${min}-${max} arasında tam sayı olmalı.` });
+        return null;
+      }
+      return n;
+    });
+
 export const checkbox = z
   .string()
   .optional()

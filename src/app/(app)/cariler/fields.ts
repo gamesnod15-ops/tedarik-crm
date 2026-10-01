@@ -2,7 +2,7 @@ import type { Field } from "@/components/entity-form";
 
 export const CARI_TIP_LABELS = { MUSTERI: "Müşteri", TEDARIKCI: "Tedarikçi" } as const;
 
-export const cariFields: Field[] = [
+const temelAlanlar: Field[] = [
   { name: "unvan", label: "Unvan", required: true, placeholder: "Firma / kişi adı" },
   { name: "yetkili", label: "Yetkili", half: true, placeholder: "Yetkili kişi" },
   { name: "telefon", label: "Telefon", type: "tel", half: true, placeholder: "0532 123 45 67" },
@@ -19,3 +19,20 @@ export const cariFields: Field[] = [
   { name: "notlar", label: "Notlar", type: "textarea", placeholder: "İç not" },
   { name: "isActive", label: "Aktif", type: "checkbox" },
 ];
+
+const vadeAlani: Field = {
+  name: "vadeGunu",
+  label: "Ödeme vadesi (gün)",
+  type: "number",
+  step: "1",
+  half: true,
+  placeholder: "30",
+  hint: "Boşsa 30 gün. Vadesi geçen alacak uyarıları buna göre hesaplanır.",
+};
+
+/** Cari formu alanları: vade yalnızca müşteri için gösterilir. */
+export function cariFieldsFor(tipi: "MUSTERI" | "TEDARIKCI"): Field[] {
+  if (tipi !== "MUSTERI") return temelAlanlar;
+  const i = temelAlanlar.findIndex((f) => f.name === "acilisBakiyesi");
+  return [...temelAlanlar.slice(0, i + 1), vadeAlani, ...temelAlanlar.slice(i + 1)];
+}

@@ -1,0 +1,9 @@
+# Vercel'e doğrudan yükleme (CLI) yapılırken gönderilmeyecek dosyalar
+.env
+.env.*
+.git
+docs
+graphify-out
+.scratch*
+*.log
+.vercel

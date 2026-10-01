@@ -12,7 +12,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { deleteUrunAction, saveUrunAction } from "../siparisler/actions";
 import { urunFields, urunVarsayilan } from "./fields";
 
-type SP = { q?: string; durum?: string; page?: string };
+type SP = { q?: string; durum?: string; page?: string; yeni?: string };
 
 export default async function UrunlerPage({ searchParams }: { searchParams: Promise<SP> }) {
   const user = await requireUser("siparisler:read");
@@ -39,7 +39,7 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">Ürünler</h1>
         </div>
         {canWrite && (
-          <RecordDialog label="Yeni ürün" title="Yeni ürün" fields={urunFields} initial={urunVarsayilan} action={saveUrunAction} />
+          <RecordDialog autoOpen={sp.yeni === "1"} label="Yeni ürün" title="Yeni ürün" fields={urunFields} initial={urunVarsayilan} action={saveUrunAction} />
         )}
       </header>
 

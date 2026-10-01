@@ -100,6 +100,8 @@ model Cari {
   // Devreden bakiye. Müşteri için + = müşteri bize borçlu; tedarikçi için + = biz borçluyuz.
   acilisBakiyesi Decimal  @default(0) @db.Decimal(14, 2)
   notlar         String?
+  // Müşteri ödeme vadesi (gün). Boşsa 30 gün varsayılır; vadesi geçen alacak uyarıları buna göre hesaplanır.
+  vadeGunu       Int?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -277,4 +279,22 @@ model Alim {
   @@index([tarih])
   @@index([cariId, tarih])
   @@index([faturaNo])
+}
+
+// Her ay kendiliğinden masraf kaydı oluşturan şablon (kira, elektrik, maaş…). Günlük zamanlanmış görev çalıştırır.
+model TekrarlayanMasraf {
+  id           String      @id @default(cuid())
+  aciklama     String
+  kategori     String?
+  tutar        Decimal     @db.Decimal(14, 2)
+  odemeSekli   OdemeSekli?
+  // Ayın kaçıncı günü oluşturulacağı (1-28).
+  gun          Int
+  isActive     Boolean     @default(true)
+  // Son oluşturulan ay ("YYYY-MM"): aynı ay için ikinci kez oluşturulmaz.
+  sonOlusturma String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([isActive])
 }

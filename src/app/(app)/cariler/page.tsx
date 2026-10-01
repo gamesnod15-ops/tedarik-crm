@@ -12,9 +12,9 @@ import { QueryTabs } from "@/components/query-tabs";
 import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteCariAction, saveCariAction } from "./actions";
-import { CARI_TIP_LABELS, cariFields } from "./fields";
+import { CARI_TIP_LABELS, cariFieldsFor } from "./fields";
 
-type SP = { tip?: string; q?: string; durum?: string; page?: string };
+type SP = { tip?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
 export default async function CarilerPage({ searchParams }: { searchParams: Promise<SP> }) {
   const user = await requireUser("cariler:read");
@@ -58,9 +58,10 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
         </div>
         {canWrite && (
           <RecordDialog
+            autoOpen={sp.yeni === "1"}
             label={`Yeni ${label.toLowerCase()}`}
             title={`Yeni ${label.toLowerCase()}`}
-            fields={cariFields}
+            fields={cariFieldsFor(tipi)}
             initial={{ isActive: "on" }}
             hidden={{ tipi }}
             action={saveCariAction}
@@ -124,7 +125,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
                             variant="link"
                             label="Düzenle"
                             title={`${label} düzenle`}
-                            fields={cariFields}
+                            fields={cariFieldsFor(c.tipi)}
                             hidden={{ id: c.id, tipi: c.tipi }}
                             initial={{
                               unvan: c.unvan,
@@ -133,6 +134,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
                               eposta: c.eposta ?? "",
                               adres: c.adres ?? "",
                               acilisBakiyesi: c.acilisBakiyesi.toString(),
+                              vadeGunu: c.vadeGunu?.toString() ?? "",
                               notlar: c.notlar ?? "",
                               isActive: c.isActive ? "on" : "",
                             }}

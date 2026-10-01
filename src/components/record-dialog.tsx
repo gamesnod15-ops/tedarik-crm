@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormState } from "@/lib/crud";
 import { EntityForm, type Field, type Values } from "./entity-form";
 import { Modal } from "./modal";
@@ -15,6 +15,7 @@ export function RecordDialog({
   action,
   variant = "primary",
   submitLabel = "Kaydet",
+  autoOpen = false,
 }: {
   label: string;
   title: string;
@@ -24,9 +25,21 @@ export function RecordDialog({
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   variant?: "primary" | "secondary" | "link";
   submitLabel?: string;
+  /** true: sayfa açılır açılmaz pencere açılır (hızlı erişim bağlantıları: ?yeni=1). */
+  autoOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const close = useCallback(() => setOpen(false), []);
+
+  // Pencere kendiliğinden açıldıysa adres çubuğundaki ?yeni=1 temizlenir (yenilemede tekrar açılmasın).
+  useEffect(() => {
+    if (!autoOpen) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("yeni")) {
+      url.searchParams.delete("yeni");
+      window.history.replaceState(null, "", url);
+    }
+  }, [autoOpen]);
 
   const cls =
     variant === "primary"

@@ -12,9 +12,10 @@ import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import type { Option } from "@/components/entity-form";
 import { deleteMasrafAction, deleteOdemeAction, saveMasrafAction, saveOdemeAction } from "./actions";
+import { TekrarlayanBolumu } from "./tekrarlayan";
 import { ISLEM_TIPI_LABELS, ODEME_SEKLI_LABELS, masrafFields, odemeFields } from "./fields";
 
-type SP = { tip?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string };
+type SP = { tip?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string; yeni?: string };
 
 function Total({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -76,6 +77,7 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
         </div>
         {p.canWrite && (
           <RecordDialog
+            autoOpen={p.sp.yeni === "1"}
             label="Yeni tahsilat / ödeme"
             title="Yeni tahsilat / ödeme"
             fields={fields}
@@ -195,6 +197,7 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
         <Total label="Masraf toplamı" value={formatMoney(sum._sum.tutar ?? 0)} tone="text-red-700" />
         {p.canWrite && (
           <RecordDialog
+            autoOpen={p.sp.yeni === "1"}
             label="Yeni masraf"
             title="Yeni masraf"
             fields={masrafFields}
@@ -260,6 +263,7 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
         </table>
       </div>
       <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "MASRAF", from: p.sp.from, to: p.sp.to, q: p.sp.q }} />
+        <TekrarlayanBolumu canWrite={p.canWrite} />
     </>
   );
 }

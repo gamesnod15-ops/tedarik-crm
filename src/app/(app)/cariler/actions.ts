@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
-import { checkbox, dbErrorMessage, firstIssue, optEmail, optMoney, optPhone, optText, reqText, type FormState } from "@/lib/crud";
+import { checkbox, dbErrorMessage, firstIssue, optEmail, optInt, optMoney, optPhone, optText, reqText, type FormState } from "@/lib/crud";
 
 const schema = z.object({
   id: z.string().optional(),
@@ -16,6 +16,7 @@ const schema = z.object({
   eposta: optEmail(),
   adres: optText(500),
   acilisBakiyesi: optMoney("Açılış bakiyesi", { allowNegative: true }),
+  vadeGunu: optInt("Vade", 0, 365),
   notlar: optText(1000),
   isActive: checkbox,
 });

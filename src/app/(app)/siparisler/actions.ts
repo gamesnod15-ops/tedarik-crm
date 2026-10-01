@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
 import { siparisToplam } from "@/lib/finance";
+import { formatDate } from "@/lib/format";
+import { urunAnahtari } from "@/lib/paste";
 import { DURUMLAR, DURUM_LABELS } from "./durum";
 import {
   checkbox,
@@ -224,6 +226,79 @@ export async function setSiparisDurumAction(_prev: FormState, formData: FormData
     await audit({ userId: actor.id, action: "siparis.durum", entity: "Siparis", entityId: id, meta: { no: onceki.no, from: onceki.durum, to: durum } });
     refresh(onceki.cariId);
     return { ok: `#${onceki.no} → ${DURUM_LABELS[durum]}` };
+  } catch (err) {
+    return { error: dbErrorMessage(err) };
+  }
+}
+
+// ── Akıllı varsayılanlar ──
+
+/** Bir müşteri için her ürünün en son kullanılan birim fiyatı (iptal edilen siparişler sayılmaz). */
+export async function sonFiyatlarAction(cariId: string): Promise<Record<string, { fiyat: string; tarih: string }>> {
+  await requireUser("siparisler:read");
+  if (!cariId) return {};
+  const kalemler = await db.siparisKalem.findMany({
+    where: { siparis: { cariId, durum: { not: "IPTAL" } } },
+    orderBy: [{ siparis: { tarih: "desc" } }, { siparis: { createdAt: "desc" } }],
+    select: { urunId: true, birimFiyat: true, siparis: { select: { tarih: true } } },
+    take: 1000,
+  });
+  const sonuc: Record<string, { fiyat: string; tarih: string }> = {};
+  for (const k of kalemler) {
+    if (!(k.urunId in sonuc)) sonuc[k.urunId] = { fiyat: k.birimFiyat.toString(), tarih: formatDate(k.siparis.tarih) };
+  }
+  return sonuc;
+}
+
+// ── Excel'den yapıştırma: ürünleri eşleştir / oluştur ──
+
+export type HazirUrun = { anahtar: string; id: string; ad: string; birim: string; birimFiyat: string; kdvOrani: number; yeni: boolean };
+
+/**
+ * Yapıştırılan satırlardaki ürün adlarını kayıtlı ürünlerle eşleştirir (büyük/küçük harf önemsiz).
+ * olustur=true ise eşleşmeyenler, yapıştırılan fiyat ve KDV ile yeni ürün olarak kaydedilir.
+ */
+export async function urunleriHazirlaAction(
+  items: { ad: string; fiyat: string; kdv: string }[],
+  olustur: boolean,
+): Promise<{ error?: string; urunler?: HazirUrun[] }> {
+  const actor = await requireUser("siparisler:write");
+  if (!Array.isArray(items) || items.length === 0) return { error: "Eklenecek satır yok." };
+  if (items.length > 300) return { error: "En fazla 300 satır yapıştırılabilir." };
+
+  const benzersiz = new Map<string, { ad: string; fiyat: string; kdv: string }>();
+  for (const it of items) {
+    const anahtar = urunAnahtari(String(it.ad ?? ""));
+    if (anahtar && !benzersiz.has(anahtar)) benzersiz.set(anahtar, { ad: String(it.ad).replace(/\s+/g, " ").trim().slice(0, 200), fiyat: String(it.fiyat ?? ""), kdv: String(it.kdv ?? "") });
+  }
+
+  try {
+    const mevcut = new Map((await db.urun.findMany({ take: 5000 })).map((u) => [urunAnahtari(u.ad), u]));
+    const sonuc: HazirUrun[] = [];
+    const eksik: string[] = [];
+
+    for (const [anahtar, it] of benzersiz) {
+      const var_ = mevcut.get(anahtar);
+      if (var_) {
+        sonuc.push({ anahtar, id: var_.id, ad: var_.ad, birim: var_.birim, birimFiyat: var_.birimFiyat.toString(), kdvOrani: var_.kdvOrani, yeni: false });
+        continue;
+      }
+      if (!olustur) {
+        eksik.push(it.ad);
+        continue;
+      }
+      const kdv = kdvField.safeParse(it.kdv);
+      if (!kdv.success) return { error: `"${it.ad}" yeni ürün olarak eklenecek ama KDV oranı belirtilmemiş. KDV sütununu doldurun ya da varsayılan KDV girin.` };
+      const fiyat = moneyField("Fiyat", { allowZero: true }).safeParse(it.fiyat || "0");
+      if (!fiyat.success) return { error: `"${it.ad}" için fiyat okunamadı.` };
+      const u = await db.urun.create({ data: { ad: it.ad, birim: "Adet", birimFiyat: fiyat.data, kdvOrani: kdv.data } });
+      await audit({ userId: actor.id, action: "urun.create", entity: "Urun", entityId: u.id, meta: { ad: u.ad, kaynak: "excel" } });
+      sonuc.push({ anahtar, id: u.id, ad: u.ad, birim: u.birim, birimFiyat: u.birimFiyat.toString(), kdvOrani: u.kdvOrani, yeni: true });
+    }
+
+    if (eksik.length) return { error: `Kayıtlı olmayan ürün: ${eksik.slice(0, 5).join(", ")}${eksik.length > 5 ? ` ve ${eksik.length - 5} tane daha` : ""}.` };
+    refresh();
+    return { urunler: sonuc };
   } catch (err) {
     return { error: dbErrorMessage(err) };
   }

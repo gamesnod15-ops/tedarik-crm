@@ -6,9 +6,15 @@ export const metadata: Metadata = {
   description: "Tedarik süreçleri yönetim uygulaması",
 };
 
+// Sayfa çizilmeden önce kayıtlı (ya da sistem) temasını uygular: açılışta beyaz ekran yanıp sönmez.
+const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("ovox.theme");var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );

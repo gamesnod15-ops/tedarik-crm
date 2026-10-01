@@ -16,7 +16,8 @@ export default async function LoginPage({
         <div className="mb-6 text-center">
           <h1>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="mx-auto h-6 w-auto" />
+            <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="mx-auto h-6 w-auto dark:hidden" />
+            <img src="/ovox-crm-logo-dark.svg" alt="Ovox CRM" className="mx-auto hidden h-6 w-auto dark:block" />
           </h1>
           <p className="mt-4 text-sm text-slate-500">Hesabınızla giriş yapın</p>
         </div>

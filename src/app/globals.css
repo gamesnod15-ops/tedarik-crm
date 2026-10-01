@@ -14,6 +14,80 @@
   --color-petrol-950: #072530;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Koyu tema: arayüz Tailwind'in renk değişkenlerini kullandığı için paleti ters çevirmek yeterli
+ * (açık gri → koyu, koyu metin → açık). Sınıf <html> öğesine layout'taki betik / tema düğmesi tarafından eklenir.
+ */
+.dark {
+  color-scheme: dark;
+
+  --color-white: #121b2d;
+  --color-slate-50: #0b1220;
+  --color-slate-100: #1a2438;
+  --color-slate-200: #263248;
+  --color-slate-300: #36445f;
+  --color-slate-400: #6b7a99;
+  --color-slate-500: #8d9bb7;
+  --color-slate-600: #aeb9ce;
+  --color-slate-700: #c9d3e3;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+
+  --color-petrol-50: #0c2a33;
+  --color-petrol-100: #123a46;
+  --color-petrol-200: #1a5566;
+  --color-petrol-300: #2d7a8f;
+  --color-petrol-400: #3f9bb3;
+  --color-petrol-500: #4bb0c8;
+  --color-petrol-600: #1a809b;
+  --color-petrol-700: #7fd0e3;
+  --color-petrol-800: #a5e0ee;
+  --color-petrol-900: #cdeff7;
+
+  --color-emerald-50: #0d2a20;
+  --color-emerald-100: #123a2c;
+  --color-emerald-200: #1b5440;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #34d399;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+
+  --color-red-50: #2d1316;
+  --color-red-100: #3b1a1e;
+  --color-red-200: #5b2328;
+  --color-red-500: #ef4444;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+
+  --color-amber-50: #2b2110;
+  --color-amber-100: #3a2d14;
+  --color-amber-200: #5a4318;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-sky-50: #0e2433;
+  --color-sky-100: #123248;
+  --color-sky-200: #194766;
+  --color-sky-600: #38bdf8;
+  --color-sky-700: #7dd3fc;
+  --color-sky-800: #bae6fd;
+  --color-sky-900: #e0f2fe;
+}
+
+/* Açık tonda parlayan düğmenin üzerine gelince koyulaşması (petrol-700 koyu temada açık bir tondur). */
+.dark .btn-primary:hover {
+  background-color: #14738c;
+}
+
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
@@ -31,7 +105,7 @@
     @apply mb-1 block text-sm font-medium text-slate-700;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-lg bg-petrol-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-petrol-700 disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-lg bg-petrol-600 px-4 py-2 text-sm font-medium text-[#fff] transition hover:bg-petrol-700 disabled:opacity-60;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60;
