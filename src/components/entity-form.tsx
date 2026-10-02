@@ -20,6 +20,8 @@ export type Field = {
   autoFrom?: { field: string; map: Record<string, string> };
   /** Yalnızca belirtilen alan, listedeki değerlerden birine sahipse gösterilir (ve gönderilir). */
   showIf?: { field: string; in: string[] };
+  /** Belirtilen alan seçilmeden pasif kalır (placeholder: pasifken gösterilen yazı); o alan temizlenince bu alan da boşalır. */
+  requires?: { field: string; placeholder?: string };
   step?: string;
   hint?: string;
   /** true: satırın yarısını kaplar (iki sütun). */
@@ -72,6 +74,7 @@ export function EntityForm({
       const type = fields.find((f) => f.name === name)?.type;
       const next = { ...prev, [name]: transform(type, value) };
       for (const f of fields) {
+        if (f.requires?.field === name && !value) next[f.name] = "";
         if (f.autoFrom?.field === name && f.autoFrom.map[value] !== undefined) next[f.name] = f.autoFrom.map[value];
         if (f.groupBy === name) {
           const stillValid = f.options?.some((o) => o.value === next[f.name] && o.group === value);
@@ -109,6 +112,7 @@ export function EntityForm({
           }
 
           const options = f.groupBy ? f.options?.filter((o) => o.group === values[f.groupBy!]) : f.options;
+          const pasif = !!f.requires && !values[f.requires.field];
 
           return (
             <div key={f.name} className={span}>
@@ -122,10 +126,11 @@ export function EntityForm({
                   name={f.name}
                   value={values[f.name]}
                   required={f.required}
+                  disabled={pasif}
                   onChange={(e) => set(f.name, e.target.value)}
-                  className="input"
+                  className="input disabled:cursor-not-allowed"
                 >
-                  <option value="">{f.placeholder ?? "Seçin…"}</option>
+                  <option value="">{pasif ? (f.requires?.placeholder ?? "Önce gerekli alanı seçin") : (f.placeholder ?? "Seçin…")}</option>
                   {options?.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
