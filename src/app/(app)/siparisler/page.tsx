@@ -139,7 +139,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
   );
 }
 
-async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
+async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: number; canWrite: boolean; baslik: React.ReactNode }) {
   const from = parseDateInput(sp.from);
   const to = parseDateInput(sp.to);
   const where: Prisma.AlimWhereInput = {
@@ -169,10 +169,8 @@ async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWr
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <p className="text-sm text-slate-500">
-          Alım toplamı (KDV dahil): <span className="text-base font-semibold tabular-nums text-slate-900">{formatMoney(sum._sum.toplam ?? 0)}</span>
-        </p>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {baslik}
         {canWrite && (
           <RecordDialog
             autoOpen={sp.yeni === "1"}
@@ -183,7 +181,11 @@ async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWr
             action={saveAlimAction}
           />
         )}
-      </div>
+      </header>
+
+      <p className="text-sm text-slate-500">
+        Alım toplamı (KDV dahil): <span className="text-base font-semibold tabular-nums text-slate-900">{formatMoney(sum._sum.toplam ?? 0)}</span>
+      </p>
 
       <AutoForm className="toolbar">
         <DateFilters sp={sp} tip="TEDARIKCI" />
@@ -259,30 +261,38 @@ export default async function SiparislerPage({ searchParams }: { searchParams: P
   const page = pageOf(sp.page);
   const canWrite = can(user, "siparisler:write");
 
+  // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için alım sekmesi kendi başlık satırını oluşturur.
+  const baslik = (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Siparişler</h1>
+      <QueryTabs
+        param="tip"
+        items={[
+          { value: "MUSTERI", label: "Müşteri Siparişleri" },
+          { value: "TEDARIKCI", label: "Tedarikçi Alımları" },
+        ]}
+      />
+    </div>
+  );
+
+  if (tip === "TEDARIKCI") {
+    return (
+      <div className="space-y-3">
+        <AlimListesi sp={sp} page={page} canWrite={canWrite} baslik={baslik} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Siparişler</h1>
-        <QueryTabs
-          param="tip"
-          items={[
-            { value: "MUSTERI", label: "Müşteri Siparişleri" },
-            { value: "TEDARIKCI", label: "Tedarikçi Alımları" },
-          ]}
-        />
-        </div>
-        {canWrite && tip === "MUSTERI" && (
+        {baslik}
+        {canWrite && (
           <Link href="/siparisler/yeni?tip=MUSTERI" className="btn-primary"><PlusIcon />Yeni sipariş</Link>
         )}
       </header>
 
-
-      {tip === "TEDARIKCI" ? (
-        <AlimListesi sp={sp} page={page} canWrite={canWrite} />
-      ) : (
-        <SiparisListesi sp={sp} tip="MUSTERI" page={page} canWrite={canWrite} />
-      )}
+      <SiparisListesi sp={sp} tip="MUSTERI" page={page} canWrite={canWrite} />
     </div>
   );
 }

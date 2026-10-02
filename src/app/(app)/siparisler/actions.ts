@@ -10,6 +10,7 @@ import { siparisToplam } from "@/lib/finance";
 import { formatDate } from "@/lib/format";
 import { urunAnahtari } from "@/lib/paste";
 import { DURUMLAR, DURUM_LABELS } from "./durum";
+import { YENI_TEDARIKCI } from "./alim-fields";
 import {
   checkbox,
   dateField,
@@ -19,6 +20,7 @@ import {
   moneyField,
   optMoney,
   optQuantity,
+  optPhone,
   optText,
   quantityField,
   reqText,
@@ -162,6 +164,9 @@ const alimSchema = z.object({
   id: z.string().optional(),
   tarih: dateField("Tarih"),
   cariId: reqText("Tedarikçi"),
+  // cariId = YENI_TEDARIKCI ise tedarikçi bu bilgilerle alımla birlikte oluşturulur.
+  yeniUnvan: optText(200),
+  yeniTelefon: optPhone(),
   faturaNo: optText(50),
   aciklama: optText(300),
   miktar: optQuantity("Miktar"),
@@ -172,25 +177,52 @@ export async function saveAlimAction(_prev: FormState, formData: FormData): Prom
   const actor = await requireUser("siparisler:write");
   const parsed = alimSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const { id, ...data } = parsed.data;
+  const { id, yeniUnvan, yeniTelefon, ...data } = parsed.data;
+  const yeniTedarikci = data.cariId === YENI_TEDARIKCI;
+  if (yeniTedarikci && !yeniUnvan) return { error: "Yeni tedarikçi unvanı gerekli." };
 
   try {
-    const cari = await db.cari.findUnique({ where: { id: data.cariId }, select: { tipi: true } });
-    if (!cari) return { error: "Tedarikçi bulunamadı." };
-    if (cari.tipi !== "TEDARIKCI") return { error: "Alım kaydı için tedarikçi seçin." };
+    let olusanTedarikci: { id: string; unvan: string } | null = null;
+    if (yeniTedarikci) {
+      // Aynı unvanda tedarikçi zaten varsa yenisi açılmaz, alım ona yazılır (büyük/küçük harf ve boşluk farkı önemsiz).
+      // Karşılaştırma Türkçe kurallarla JS'te yapılır: veritabanının "insensitive" araması İ/i ve I/ı'yı eşlemiyor.
+      const unvan = yeniUnvan!.replace(/\s+/g, " ");
+      const anahtar = urunAnahtari(unvan);
+      const mevcut = (await db.cari.findMany({ where: { tipi: "TEDARIKCI" }, select: { id: true, unvan: true } })).find((c) => urunAnahtari(c.unvan) === anahtar);
+      if (mevcut) {
+        data.cariId = mevcut.id;
+      } else {
+        // Tedarikçi ve alım tek işlemde: alım kaydedilemezse tedarikçi de oluşmaz.
+        const [c, a] = await db.$transaction(async (tx) => {
+          const c = await tx.cari.create({ data: { tipi: "TEDARIKCI", unvan, telefon: yeniTelefon } });
+          const a = id ? await tx.alim.update({ where: { id }, data: { ...data, cariId: c.id } }) : await tx.alim.create({ data: { ...data, cariId: c.id } });
+          return [c, a] as const;
+        });
+        olusanTedarikci = c;
+        data.cariId = c.id;
+        await audit({ userId: actor.id, action: "cari.create", entity: "Cari", entityId: c.id, meta: { unvan: c.unvan, tipi: "TEDARIKCI", kaynak: "alim" } });
+        await audit({ userId: actor.id, action: id ? "alim.update" : "alim.create", entity: "Alim", entityId: a.id, meta: { toplam: data.toplam.toString(), faturaNo: data.faturaNo } });
+      }
+    }
 
-    if (id) {
-      await db.alim.update({ where: { id }, data });
-      await audit({ userId: actor.id, action: "alim.update", entity: "Alim", entityId: id, meta: { toplam: data.toplam.toString() } });
-    } else {
-      const a = await db.alim.create({ data });
-      await audit({ userId: actor.id, action: "alim.create", entity: "Alim", entityId: a.id, meta: { toplam: data.toplam.toString(), faturaNo: data.faturaNo } });
+    if (!olusanTedarikci) {
+      const cari = await db.cari.findUnique({ where: { id: data.cariId }, select: { tipi: true } });
+      if (!cari) return { error: "Tedarikçi bulunamadı." };
+      if (cari.tipi !== "TEDARIKCI") return { error: "Alım kaydı için tedarikçi seçin." };
+
+      if (id) {
+        await db.alim.update({ where: { id }, data });
+        await audit({ userId: actor.id, action: "alim.update", entity: "Alim", entityId: id, meta: { toplam: data.toplam.toString() } });
+      } else {
+        const a = await db.alim.create({ data });
+        await audit({ userId: actor.id, action: "alim.create", entity: "Alim", entityId: a.id, meta: { toplam: data.toplam.toString(), faturaNo: data.faturaNo } });
+      }
     }
     refresh(data.cariId);
+    return { ok: olusanTedarikci ? `Kaydedildi. "${olusanTedarikci.unvan}" tedarikçi olarak eklendi.` : "Kaydedildi." };
   } catch (err) {
     return { error: dbErrorMessage(err) };
   }
-  return { ok: "Kaydedildi." };
 }
 
 export async function deleteAlimAction(_prev: FormState, formData: FormData): Promise<FormState> {
