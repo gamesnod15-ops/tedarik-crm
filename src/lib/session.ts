@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "./db";
@@ -5,10 +6,11 @@ import type { Permission } from "./permissions";
 import { ROLE_PERMISSIONS } from "./permissions";
 
 /**
+ * İstek başına bir kez çalışır (React cache): layout ve sayfa aynı istekte ayrı ayrı çağırsa da tek sorgu yapılır.
  * JWT'ye değil DB'ye bakar: rol ve pasife alma değişiklikleri anında geçerli olur.
  * Dönen `permissions` rolün izinleridir (src/lib/permissions.ts).
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) return null;
   const user = await db.user.findUnique({
@@ -18,7 +20,7 @@ export async function getCurrentUser() {
   if (!user || !user.isActive) return null;
   const permissions = ROLE_PERMISSIONS[user.role];
   return { ...user, permissions };
-}
+});
 
 export function can(user: { permissions: readonly Permission[] }, permission: Permission) {
   return user.permissions.includes(permission);

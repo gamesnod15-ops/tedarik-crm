@@ -11,8 +11,9 @@ import { notify } from "./lib/notify";
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 
-// Kullanıcı yokken de bcrypt çalıştırıp zamanlama farkını gizlemek için.
-const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing", 12);
+// Kullanıcı yokken de bcrypt çalıştırıp zamanlama farkını gizlemek için (rastgele bir değerin önceden üretilmiş özeti).
+// Modül yüklenirken hashSync çalıştırmak her soğuk başlangıçta yüzlerce ms işlemciyi kilitliyordu: bu dosya her sayfada yüklenir.
+const DUMMY_HASH = "$2b$12$Qdbqb9nohyyudo5LwaY/EeHAGS6hmvn2t0bSAhFm1fiaHA4enK726";
 
 const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
@@ -83,11 +84,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        await db.user.update({
-          where: { id: user.id },
-          data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
-        });
-        await audit({ userId: user.id, action: "auth.login", meta: { email } });
+        await Promise.all([
+          db.user.update({
+            where: { id: user.id },
+            data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() },
+          }),
+          audit({ userId: user.id, action: "auth.login", meta: { email } }),
+        ]);
 
         return { id: user.id, email: user.email, name: user.name, remember: remember === "on" };
       },
