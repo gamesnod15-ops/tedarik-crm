@@ -5,6 +5,7 @@ import { getBakiyeler, getOzet, siparisToplam } from "@/lib/finance";
 import { getVadesiGecenAlacaklar } from "@/lib/alacak";
 import { formatDate, formatMoney, monthStartInput, parseDateInput, todayInput } from "@/lib/format";
 import { ISLEM_TIPI_LABELS } from "./finans/fields";
+import { MobileTables } from "@/components/mobile-tables";
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -146,6 +147,7 @@ export default async function OzetPage() {
               ))}
             </tbody>
           </table>
+          <MobileTables />
         </div>
 
         <div className="card overflow-hidden">
@@ -168,6 +170,7 @@ export default async function OzetPage() {
               ))}
             </tbody>
           </table>
+          <MobileTables />
         </div>
       </section>
     </div>

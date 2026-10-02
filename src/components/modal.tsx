@@ -28,9 +28,7 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={onClose}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
+      // Dışarı (arka plana) tıklamak pencereyi kapatmaz: yarım kalan form kaybolmasın. × düğmesi, Vazgeç ya da Esc ile kapanır.
       aria-label={title}
       className={`m-auto w-full ${size === "xl" ? "max-w-5xl" : "max-w-xl"} rounded-xl border border-slate-300 bg-white p-0 shadow-xl backdrop:bg-black/50`}
     >

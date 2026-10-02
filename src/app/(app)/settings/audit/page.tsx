@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { ACTION_LABELS, actionLabel } from "@/lib/audit";
 import { formatDateTime } from "@/lib/format";
+import { MobileTables } from "@/components/mobile-tables";
 
 const PAGE_SIZE = 25;
 
@@ -77,6 +78,7 @@ export default async function AuditPage({
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
 
       {pages > 1 && (

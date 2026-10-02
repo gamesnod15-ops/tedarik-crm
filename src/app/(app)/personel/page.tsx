@@ -13,30 +13,15 @@ import { DeleteButton } from "@/components/delete-button";
 import type { Field } from "@/components/entity-form";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
 import { SegmentFilter } from "@/components/segment-filter";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; page?: string };
 
 const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
 const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
 
-const personelFields: Field[] = [
-  { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
-  { name: "sicilNo", label: "Sicil no", required: true, half: true, placeholder: "Ör. 1024" },
-  { name: "departman", label: "Departman", half: true, placeholder: "Ör. Üretim" },
-  { name: "telefon", label: "Telefon", type: "tel", half: true, placeholder: "0532 123 45 67" },
-  { name: "iseGirisTarihi", label: "İşe giriş tarihi", type: "date", required: true, half: true },
-  {
-    name: "durum",
-    label: "Durum",
-    type: "select",
-    required: true,
-    half: true,
-    options: [
-      { value: "AKTIF", label: "Aktif" },
-      { value: "PASIF", label: "Pasif" },
-    ],
-  },
-];
+// Personel kartı yalnızca ad soyaddan oluşur.
+const personelFields: Field[] = [{ name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" }];
 
 function hareketFields(personelOptions: { value: string; label: string }[]): Field[] {
   return [
@@ -68,14 +53,7 @@ function hareketFields(personelOptions: { value: string; label: string }[]): Fie
 
 async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
   const where: Prisma.PersonelWhereInput = {
-    ...(sp.q && {
-      OR: [
-        { adSoyad: { contains: sp.q, mode: "insensitive" } },
-        { sicilNo: { contains: sp.q, mode: "insensitive" } },
-        { departman: { contains: sp.q, mode: "insensitive" } },
-      ],
-    }),
-    ...((sp.durum === "AKTIF" || sp.durum === "PASIF") && { durum: sp.durum }),
+    ...(sp.q && { adSoyad: { contains: sp.q, mode: "insensitive" } }),
   };
   const [rows, total] = await Promise.all([
     db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
@@ -86,10 +64,9 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
     <>
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value="KART" />
-        <SearchInput defaultValue={sp.q ?? ""} placeholder="Ad, sicil no veya departman" className="w-72" />
-        <SegmentFilter name="durum" label="Durum" value={sp.durum} options={[{ value: "AKTIF", label: "Aktif" }, { value: "PASIF", label: "Pasif" }]} />
+        <SearchInput defaultValue={sp.q ?? ""} placeholder="Ad soyad" className="w-72" />
         <button className="sr-only">Filtrele</button>
-        {(sp.q || sp.durum) && <Link href="?tip=KART" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+        {sp.q && <Link href="?tip=KART" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
@@ -97,26 +74,14 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
-              <th className="th">Sicil no</th>
-              <th className="th">Departman</th>
-              <th className="th">Telefon</th>
-              <th className="th">İşe giriş</th>
-              <th className="th">Durum</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={2} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
                 <td className="td font-medium text-slate-900">{p.adSoyad}</td>
-                <td className="td font-mono text-xs">{p.sicilNo}</td>
-                <td className="td">{p.departman ?? "—"}</td>
-                <td className="td">{p.telefon ?? "—"}</td>
-                <td className="td whitespace-nowrap">{formatDate(p.iseGirisTarihi)}</td>
-                <td className="td">
-                  <span className={`badge ${p.durum === "AKTIF" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{p.durum === "AKTIF" ? "Aktif" : "Pasif"}</span>
-                </td>
                 <td className="td">
                   {canWrite && (
                     <div className="flex items-center justify-end gap-4">
@@ -126,17 +91,10 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                         title="Personel düzenle"
                         fields={personelFields}
                         hidden={{ id: p.id }}
-                        initial={{
-                          adSoyad: p.adSoyad,
-                          sicilNo: p.sicilNo,
-                          departman: p.departman ?? "",
-                          telefon: p.telefon ?? "",
-                          iseGirisTarihi: toDateInput(p.iseGirisTarihi),
-                          durum: p.durum,
-                        }}
+                        initial={{ adSoyad: p.adSoyad }}
                         action={savePersonelAction}
                       />
-                      <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir. Silmek yerine pasife alabilirsiniz.`} />
+                      <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir.`} />
                     </div>
                   )}
                 </td>
@@ -144,8 +102,9 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
-      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "KART", q: sp.q, durum: sp.durum }} />
+      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "KART", q: sp.q }} />
     </>
   );
 }
@@ -167,9 +126,9 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
       include: { personel: { select: { adSoyad: true } } },
     }),
     db.personelHareket.count({ where }),
-    db.personel.findMany({ orderBy: { adSoyad: "asc" }, select: { id: true, adSoyad: true, sicilNo: true, durum: true } }),
+    db.personel.findMany({ orderBy: { adSoyad: "asc" }, select: { id: true, adSoyad: true, durum: true } }),
   ]);
-  const options = personeller.map((p) => ({ value: p.id, label: `${p.adSoyad} (${p.sicilNo})${p.durum === "PASIF" ? " – pasif" : ""}` }));
+  const options = personeller.map((p) => ({ value: p.id, label: `${p.adSoyad}${p.durum === "PASIF" ? " – pasif" : ""}` }));
   const fields = hareketFields(options);
   const hasFilter = !!(sp.personel || sp.tur || sp.from || sp.to);
 
@@ -265,6 +224,7 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "HAREKET", personel: sp.personel, tur: sp.tur, from: sp.from, to: sp.to }} />
     </>
@@ -309,7 +269,7 @@ export default async function PersonelPage({ searchParams }: { searchParams: Pro
             label="Yeni personel"
             title="Yeni personel"
             fields={personelFields}
-            initial={{ durum: "AKTIF", iseGirisTarihi: toDateInput(new Date()) }}
+            initial={{}}
             action={savePersonelAction}
           />
         )}

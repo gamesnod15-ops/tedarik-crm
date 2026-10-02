@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { siparisToplam } from "@/lib/finance";
-import { formatDate, formatMoney, formatQty, parseDateInput, toDateInput } from "@/lib/format";
+import { formatDate, formatMoney, parseDateInput, toDateInput } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { QueryTabs } from "@/components/query-tabs";
@@ -17,6 +17,7 @@ import { DURUMLAR, DURUM_BADGE, DURUM_LABELS, isDurum } from "./durum";
 import { DurumSelect } from "./durum-select";
 import { alimFields } from "./alim-fields";
 import { PlusIcon } from "@/components/plus-icon";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { tip?: string; from?: string; to?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
@@ -133,6 +134,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
             })}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip, q: sp.q, from: sp.from, to: sp.to, durum }} />
     </>
@@ -202,13 +204,12 @@ async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: numbe
               <th className="th">Tedarikçi</th>
               <th className="th">Fatura no</th>
               <th className="th">Açıklama</th>
-              <th className="th text-right">Miktar</th>
               <th className="th text-right">Toplam</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((a) => (
               <tr key={a.id}>
                 <td className="td whitespace-nowrap">{formatDate(a.tarih)}</td>
@@ -217,7 +218,6 @@ async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: numbe
                 </td>
                 <td className="td font-mono text-xs">{a.faturaNo ?? "—"}</td>
                 <td className="td max-w-xs truncate text-slate-500" title={a.aciklama ?? ""}>{a.aciklama ?? "—"}</td>
-                <td className="td text-right tabular-nums">{a.miktar ? formatQty(a.miktar) : "—"}</td>
                 <td className="td text-right font-medium tabular-nums">{formatMoney(a.toplam)}</td>
                 <td className="td">
                   {canWrite && (
@@ -232,7 +232,6 @@ async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: numbe
                           tarih: toDateInput(a.tarih),
                           cariId: a.cari.id,
                           faturaNo: a.faturaNo ?? "",
-                          miktar: a.miktar?.toString() ?? "",
                           toplam: a.toplam.toString(),
                           aciklama: a.aciklama ?? "",
                         }}
@@ -246,6 +245,7 @@ async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: numbe
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "TEDARIKCI", q: sp.q, from: sp.from, to: sp.to }} />
     </>

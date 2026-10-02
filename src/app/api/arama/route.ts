@@ -42,12 +42,12 @@ export async function GET(req: Request) {
   }
   if (can(user, "personel:read")) {
     const personel = await db.personel.findMany({
-      where: { OR: [{ adSoyad: icerir }, { sicilNo: icerir }] },
+      where: { adSoyad: icerir },
       orderBy: { adSoyad: "asc" },
       take: LIMIT,
-      select: { adSoyad: true, sicilNo: true },
+      select: { adSoyad: true },
     });
-    for (const p of personel) sonuclar.push({ grup: "Personel", baslik: p.adSoyad, alt: p.sicilNo, href: `/personel?q=${encodeURIComponent(p.adSoyad)}` });
+    for (const p of personel) sonuclar.push({ grup: "Personel", baslik: p.adSoyad, href: `/personel?q=${encodeURIComponent(p.adSoyad)}` });
   }
   return NextResponse.json({ sonuclar });
 }

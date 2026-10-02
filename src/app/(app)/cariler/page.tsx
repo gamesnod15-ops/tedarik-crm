@@ -14,6 +14,8 @@ import { DeleteButton } from "@/components/delete-button";
 import { deleteCariAction, saveCariAction } from "./actions";
 import { CARI_TIP_LABELS, cariFieldsFor } from "./fields";
 import { SegmentFilter } from "@/components/segment-filter";
+import { MobileTables } from "@/components/mobile-tables";
+import { VARSAYILAN_VADE_GUN } from "@/lib/alacak";
 
 type SP = { tip?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
@@ -62,7 +64,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
             label={`Yeni ${label.toLowerCase()}`}
             title={`Yeni ${label.toLowerCase()}`}
             fields={cariFieldsFor(tipi)}
-            initial={{ isActive: "on" }}
+            initial={{ isActive: "on", vadeGunu: String(VARSAYILAN_VADE_GUN) }}
             hidden={{ tipi }}
             action={saveCariAction}
           />
@@ -122,7 +124,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
                               unvan: c.unvan,
                               telefon: c.telefon ?? "",
                               acilisBakiyesi: c.acilisBakiyesi.toString(),
-                              vadeGunu: c.vadeGunu?.toString() ?? "",
+                              vadeGunu: String(c.vadeGunu ?? VARSAYILAN_VADE_GUN),
                               notlar: c.notlar ?? "",
                               isActive: c.isActive ? "on" : "",
                             }}
@@ -138,6 +140,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
             })}
           </tbody>
         </table>
+        <MobileTables />
       </div>
 
       <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: tipi, q: sp.q, durum: sp.durum }} />

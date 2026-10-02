@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
 import { GlobalSearch } from "@/components/global-search";
-import { MobileTables } from "@/components/mobile-tables";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "./sign-out";
 
@@ -302,7 +301,6 @@ export function AppShell({
       </div>
 
       <main className="min-w-0 flex-1 px-4 py-5 sm:p-5 print:p-0">
-        <MobileTables />
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
 

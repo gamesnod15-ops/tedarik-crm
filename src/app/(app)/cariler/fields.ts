@@ -24,7 +24,7 @@ const vadeAlani: Field = {
   step: "1",
   half: true,
   placeholder: "30",
-  hint: "Boşsa 30 gün. Vadesi geçen alacak uyarıları buna göre hesaplanır.",
+  hint: "Varsayılan 30 gün; isterseniz değiştirin. Vadesi geçen alacak uyarıları buna göre hesaplanır.",
 };
 
 /** Cari formu alanları: vade yalnızca müşteri için gösterilir. Yetkili, e-posta ve adres tutulmaz. */

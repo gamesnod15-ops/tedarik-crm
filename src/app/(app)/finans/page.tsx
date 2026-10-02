@@ -15,6 +15,7 @@ import { deleteMasrafAction, deleteOdemeAction, saveMasrafAction, saveOdemeActio
 import { TekrarlayanBolumu } from "./tekrarlayan";
 import { ISLEM_TIPI_LABELS, ODEME_SEKLI_LABELS, masrafFields, odemeFields } from "./fields";
 import { SegmentFilter } from "@/components/segment-filter";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { tip?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string; yeni?: string };
 
@@ -159,6 +160,7 @@ async function OdemeBolumu(p: BolumProps) {
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "ODEME", from: p.sp.from, to: p.sp.to, q: p.sp.q, cariTipi: p.sp.cariTipi, islem: p.sp.islem }} />
     </>
@@ -254,6 +256,7 @@ async function MasrafBolumu(p: BolumProps) {
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "MASRAF", from: p.sp.from, to: p.sp.to, q: p.sp.q }} />
         <TekrarlayanBolumu canWrite={p.canWrite} />

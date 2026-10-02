@@ -19,7 +19,6 @@ import {
   kdvField,
   moneyField,
   optMoney,
-  optQuantity,
   optPhone,
   optText,
   quantityField,
@@ -169,7 +168,6 @@ const alimSchema = z.object({
   yeniTelefon: optPhone(),
   faturaNo: optText(50),
   aciklama: optText(300),
-  miktar: optQuantity("Miktar"),
   toplam: moneyField("Toplam tutar"),
 });
 

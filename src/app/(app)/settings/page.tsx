@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { actionLabel } from "@/lib/audit";
 import { formatDateTime } from "@/lib/format";
+import { MobileTables } from "@/components/mobile-tables";
 
 function Stat({ label, value, tone = "text-slate-900" }: { label: string; value: number; tone?: string }) {
   return (
@@ -56,6 +57,7 @@ export default async function AdminHome() {
               ))}
             </tbody>
           </table>
+          <MobileTables />
         </div>
       </section>
     </div>

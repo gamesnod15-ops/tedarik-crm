@@ -1,14 +1,15 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 /**
+ * Tablonun hemen arkasına konur (sayfanın içinde): etiketler, sayfa React'e devredildikten (hydration) sonra yazılır.
+ * Layout'ta olsaydı loading.tsx'in Suspense sınırı yüzünden sayfa devralınmadan çalışıp uyuşmazlık hatası verirdi.
+ *
  * Mobilde tablolar kart görünümüne geçer (CSS: globals.css, table[data-kart]). Her hücreye sütun başlığı etiket olarak yazılır.
  * Form içindeki tablolar (sipariş kalemleri) olduğu gibi kalır.
  */
 export function MobileTables() {
-  const pathname = usePathname();
   useEffect(() => {
     const isle = () => {
       document.querySelectorAll<HTMLTableElement>("main table").forEach((t) => {
@@ -34,6 +35,6 @@ export function MobileTables() {
     const mo = new MutationObserver(isle);
     mo.observe(main, { childList: true, subtree: true });
     return () => mo.disconnect();
-  }, [pathname]);
+  }, []);
   return null;
 }

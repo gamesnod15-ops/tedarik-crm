@@ -5,6 +5,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { RecordDialog } from "@/components/record-dialog";
 import { deleteTekrarAction, olusturTekrarAction, saveTekrarAction } from "./actions";
 import { tekrarFields } from "./fields";
+import { MobileTables } from "@/components/mobile-tables";
 
 /** Masraflar sekmesinin altındaki "Tekrarlayan masraflar" bölümü: her ay kendiliğinden masraf kaydı açan şablonlar. */
 export async function TekrarlayanBolumu({ canWrite }: { canWrite: boolean }) {
@@ -90,6 +91,7 @@ export async function TekrarlayanBolumu({ canWrite }: { canWrite: boolean }) {
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
     </section>
   );

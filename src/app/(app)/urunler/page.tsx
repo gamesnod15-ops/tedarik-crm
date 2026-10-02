@@ -13,6 +13,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { deleteUrunAction, saveUrunAction } from "../siparisler/actions";
 import { urunFields, urunVarsayilan } from "./fields";
 import { SegmentFilter } from "@/components/segment-filter";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { q?: string; durum?: string; page?: string; yeni?: string };
 
@@ -119,6 +120,7 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </div>
       <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ q: sp.q, durum: sp.durum }} />
     </div>

@@ -7,6 +7,7 @@ import { can, requireUser } from "@/lib/session";
 import { ROLE_LABELS } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
 import { PlusIcon } from "@/components/plus-icon";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { q?: string; status?: string };
 
@@ -102,6 +103,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             })}
           </tbody>
         </table>
+        <MobileTables />
       </div>
     </div>
   );

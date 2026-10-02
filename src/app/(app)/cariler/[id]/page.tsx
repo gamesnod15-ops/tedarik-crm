@@ -8,7 +8,7 @@ import { PrintButton } from "@/components/print-button";
 import { RecordDialog } from "@/components/record-dialog";
 import { saveCariAction } from "../actions";
 import { CARI_TIP_LABELS, cariFieldsFor } from "../fields";
-import { getVadesiGecenCari } from "@/lib/alacak";
+import { VARSAYILAN_VADE_GUN, getVadesiGecenCari } from "@/lib/alacak";
 import { saveOdemeAction } from "../../finans/actions";
 import { odemeFieldsForCari } from "../../finans/fields";
 import { saveAlimAction, saveSiparisAction } from "../../siparisler/actions";
@@ -118,7 +118,7 @@ export default async function CariDetayPage({
                   unvan: cari.unvan,
                   telefon: cari.telefon ?? "",
                   acilisBakiyesi: cari.acilisBakiyesi.toString(),
-                  vadeGunu: cari.vadeGunu?.toString() ?? "",
+                  vadeGunu: String(cari.vadeGunu ?? VARSAYILAN_VADE_GUN),
                   notlar: cari.notlar ?? "",
                   isActive: cari.isActive ? "on" : "",
                 }}

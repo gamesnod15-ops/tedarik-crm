@@ -7,6 +7,7 @@ import { formatDate, formatMoney, monthStartInput, parseDateInput, todayInput } 
 import { AutoForm } from "@/components/auto-form";
 import { PrintButton } from "@/components/print-button";
 import { QueryTabs } from "@/components/query-tabs";
+import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { tip?: string; from?: string; to?: string; ay?: string; cari?: string };
 
@@ -91,6 +92,7 @@ async function GenelRapor({ sp }: { sp: SP }) {
             ))}
           </tbody>
         </table>
+        <MobileTables />
       </section>
       {kesildi && <p className="text-xs text-amber-700">Listede en fazla {RAPOR_LIMIT} kayıt gösterilir; özet kutuları tüm kayıtları kapsar. Tarih aralığını daraltın.</p>}
     </>
@@ -184,6 +186,7 @@ async function AySonuEkstreleri({ sp }: { sp: SP }) {
             </tfoot>
           )}
         </table>
+        <MobileTables />
       </section>
     </>
   );

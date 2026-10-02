@@ -26,11 +26,6 @@ function refresh() {
 const personelSchema = z.object({
   id: z.string().optional(),
   adSoyad: reqText("Ad soyad", 150),
-  sicilNo: reqText("Sicil no", 50),
-  departman: optText(100),
-  telefon: optPhone(),
-  iseGirisTarihi: dateField("İşe giriş tarihi"),
-  durum: z.enum(["AKTIF", "PASIF"], "Durumu seçin."),
 });
 
 export async function savePersonelAction(_prev: FormState, formData: FormData): Promise<FormState> {
