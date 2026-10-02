@@ -29,7 +29,6 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
     ...(sp.q && {
       OR: [
         { unvan: { contains: sp.q, mode: "insensitive" } },
-        { yetkili: { contains: sp.q, mode: "insensitive" } },
         { telefon: { contains: sp.q, mode: "insensitive" } },
       ],
     }),
@@ -73,7 +72,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
 
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value={tipi} />
-        <SearchInput defaultValue={sp.q ?? ""} placeholder="Unvan, yetkili veya telefon" className="w-72" />
+        <SearchInput defaultValue={sp.q ?? ""} placeholder="Unvan veya telefon" className="w-72" />
         <SegmentFilter name="durum" label="Durum" value={sp.durum} options={[{ value: "aktif", label: "Aktif" }, { value: "pasif", label: "Pasif" }]} />
         <button className="sr-only">Filtrele</button>
         {(sp.q || sp.durum) && <Link href={`?tip=${tipi}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
@@ -84,7 +83,6 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Unvan</th>
-              <th className="th">Yetkili</th>
               <th className="th">Telefon</th>
               <th className="th text-right">{tipi === "MUSTERI" ? "Bakiye (alacağımız)" : "Bakiye (borcumuz)"}</th>
               <th className="th">Durum</th>
@@ -93,7 +91,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
           </thead>
           <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>
+              <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>
             )}
             {rows.map((c) => {
               const bakiye = bakiyeler.get(c.id);
@@ -102,7 +100,6 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
                   <td className="td">
                     <Link href={`/cariler/${c.id}`} className="font-medium text-petrol-700 hover:underline">{c.unvan}</Link>
                   </td>
-                  <td className="td">{c.yetkili ?? "—"}</td>
                   <td className="td">{c.telefon ?? "—"}</td>
                   <td className="td text-right font-medium tabular-nums">{formatMoney(bakiye)}</td>
                   <td className="td">
@@ -123,10 +120,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
                             hidden={{ id: c.id, tipi: c.tipi }}
                             initial={{
                               unvan: c.unvan,
-                              yetkili: c.yetkili ?? "",
                               telefon: c.telefon ?? "",
-                              eposta: c.eposta ?? "",
-                              adres: c.adres ?? "",
                               acilisBakiyesi: c.acilisBakiyesi.toString(),
                               vadeGunu: c.vadeGunu?.toString() ?? "",
                               notlar: c.notlar ?? "",

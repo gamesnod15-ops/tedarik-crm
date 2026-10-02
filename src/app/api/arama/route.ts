@@ -19,15 +19,15 @@ export async function GET(req: Request) {
   if (can(user, "cariler:read")) {
     const [cariler, urunler] = await Promise.all([
       db.cari.findMany({
-        where: { OR: [{ unvan: icerir }, { yetkili: icerir }, { telefon: icerir }] },
+        where: { OR: [{ unvan: icerir }, { telefon: icerir }] },
         orderBy: { unvan: "asc" },
         take: LIMIT,
-        select: { id: true, unvan: true, tipi: true, yetkili: true },
+        select: { id: true, unvan: true, tipi: true, telefon: true },
       }),
       db.urun.findMany({ where: { ad: icerir }, orderBy: { ad: "asc" }, take: LIMIT, select: { ad: true } }),
     ]);
     for (const c of cariler) {
-      sonuclar.push({ grup: c.tipi === "MUSTERI" ? "Müşteriler" : "Tedarikçiler", baslik: c.unvan, alt: c.yetkili ?? undefined, href: `/cariler/${c.id}` });
+      sonuclar.push({ grup: c.tipi === "MUSTERI" ? "Müşteriler" : "Tedarikçiler", baslik: c.unvan, alt: c.telefon ?? undefined, href: `/cariler/${c.id}` });
     }
     for (const u of urunler) sonuclar.push({ grup: "Ürünler", baslik: u.ad, href: `/urunler?q=${encodeURIComponent(u.ad)}` });
   }

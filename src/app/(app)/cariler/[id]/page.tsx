@@ -76,9 +76,8 @@ export default async function CariDetayPage({
               {!cari.isActive && <span className="badge bg-slate-100 text-slate-600">Pasif</span>}
             </div>
             <p className="mt-1 text-sm text-slate-500">
-              {[cari.yetkili, cari.telefon, cari.eposta].filter(Boolean).join(" · ") || "İletişim bilgisi yok"}
+              {cari.telefon || "Telefon bilgisi yok"}
             </p>
-            {cari.adres && <p className="text-sm text-slate-500">{cari.adres}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <Link href={`/api/ekstre/${cari.id}?ay=${donemKey(donem)}`} prefetch={false} className="btn-secondary">PDF indir</Link>
@@ -117,10 +116,7 @@ export default async function CariDetayPage({
                 hidden={{ id: cari.id, tipi: cari.tipi }}
                 initial={{
                   unvan: cari.unvan,
-                  yetkili: cari.yetkili ?? "",
                   telefon: cari.telefon ?? "",
-                  eposta: cari.eposta ?? "",
-                  adres: cari.adres ?? "",
                   acilisBakiyesi: cari.acilisBakiyesi.toString(),
                   vadeGunu: cari.vadeGunu?.toString() ?? "",
                   notlar: cari.notlar ?? "",

@@ -5,16 +5,13 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
-import { checkbox, dbErrorMessage, firstIssue, optEmail, optInt, optMoney, optPhone, optText, reqText, type FormState } from "@/lib/crud";
+import { checkbox, dbErrorMessage, firstIssue, optInt, optMoney, optPhone, optText, reqText, type FormState } from "@/lib/crud";
 
 const schema = z.object({
   id: z.string().optional(),
   tipi: z.enum(["MUSTERI", "TEDARIKCI"], "Cari tipi geçersiz."),
   unvan: reqText("Unvan"),
-  yetkili: optText(200),
   telefon: optPhone(),
-  eposta: optEmail(),
-  adres: optText(500),
   acilisBakiyesi: optMoney("Açılış bakiyesi", { allowNegative: true }),
   vadeGunu: optInt("Vade", 0, 365),
   notlar: optText(1000),
@@ -28,6 +25,9 @@ export async function saveCariAction(_prev: FormState, formData: FormData): Prom
   const { id, tipi, ...data } = parsed.data;
 
   try {
+    // Yetkili, e-posta ve adres artık tutulmuyor: eski kayıtlarda kalan değer de kaydedilince temizlenir.
+    Object.assign(data, { yetkili: null, eposta: null, adres: null });
+
     if (id) {
       // Tip sonradan değiştirilmez: mevcut siparişlerin yönü bozulur.
       await db.cari.update({ where: { id }, data });

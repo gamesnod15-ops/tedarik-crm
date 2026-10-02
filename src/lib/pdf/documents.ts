@@ -42,7 +42,7 @@ export function addEkstreSection(pdf: Pdf, e: Ekstre) {
     title: `${e.cari.unvan} · Hesap Ekstresi`,
     meta: [
       `${musteri ? "Müşteri" : "Tedarikçi"} · Dönem: ${donemAdi(e.donem)}`,
-      [e.cari.yetkili, e.cari.telefon, e.cari.eposta].filter(Boolean).join(" · ") || "",
+      e.cari.telefon ?? "",
     ].filter(Boolean),
     summary: [
       { label: aylik ? "Devreden (önceki aydan)" : "Açılış bakiyesi", value: formatMoney(e.devreden) },

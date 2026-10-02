@@ -4,10 +4,7 @@ export const CARI_TIP_LABELS = { MUSTERI: "Müşteri", TEDARIKCI: "Tedarikçi" }
 
 const temelAlanlar: Field[] = [
   { name: "unvan", label: "Unvan", required: true, placeholder: "Firma / kişi adı" },
-  { name: "yetkili", label: "Yetkili", half: true, placeholder: "Yetkili kişi" },
   { name: "telefon", label: "Telefon", type: "tel", half: true, placeholder: "0532 123 45 67" },
-  { name: "eposta", label: "E-posta", type: "email", half: true, placeholder: "ornek@firma.com" },
-  { name: "adres", label: "Adres", type: "textarea", placeholder: "Açık adres" },
   {
     name: "acilisBakiyesi",
     label: "Açılış bakiyesi (TL)",
@@ -30,7 +27,7 @@ const vadeAlani: Field = {
   hint: "Boşsa 30 gün. Vadesi geçen alacak uyarıları buna göre hesaplanır.",
 };
 
-/** Cari formu alanları: vade yalnızca müşteri için gösterilir. */
+/** Cari formu alanları: vade yalnızca müşteri için gösterilir. Yetkili, e-posta ve adres tutulmaz. */
 export function cariFieldsFor(tipi: "MUSTERI" | "TEDARIKCI"): Field[] {
   if (tipi !== "MUSTERI") return temelAlanlar;
   const i = temelAlanlar.findIndex((f) => f.name === "acilisBakiyesi");
