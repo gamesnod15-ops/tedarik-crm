@@ -39,7 +39,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
         const { email, password, remember } = parsed.data;
 
+        const t0 = Date.now();
         const user = await db.user.findUnique({ where: { email } });
+        const tSorgu = Date.now();
 
         if (!user) {
           await bcrypt.compare(password, DUMMY_HASH);
@@ -53,6 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const ok = await bcrypt.compare(password, user.passwordHash);
+        const tSifre = Date.now();
 
         if (!ok || !user.isActive) {
           if (!ok) {
@@ -91,6 +94,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }),
           audit({ userId: user.id, action: "auth.login", meta: { email } }),
         ]);
+        // Yavaş girişin hangi adımda takıldığı sunucu günlüğünde görünsün.
+        const toplam = Date.now() - t0;
+        if (toplam > 1500) {
+          console.warn(`[giriş] yavaş: toplam ${toplam} ms (kullanıcı sorgusu ${tSorgu - t0}, şifre doğrulama ${tSifre - tSorgu}, kayıt ${Date.now() - tSifre})`);
+        }
 
         return { id: user.id, email: user.email, name: user.name, remember: remember === "on" };
       },

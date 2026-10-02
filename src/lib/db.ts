@@ -17,12 +17,22 @@ function isConnectionError(err: unknown) {
 function createClient() {
   return new PrismaClient().$extends({
     query: {
-      async $allOperations({ args, query }) {
+      async $allOperations({ model, operation, args, query }) {
+        const basla = Date.now();
         for (let attempt = 0; ; attempt++) {
+          const t0 = Date.now();
           try {
-            return await query(args);
+            const sonuc = await query(args);
+            // Yavaş sorgular (çoğunlukla uykudaki veritabanının uyanması) sunucu günlüğünde görünsün.
+            const sure = Date.now() - basla;
+            if (sure > 1000) console.warn(`[db] yavaş sorgu ${model ?? ""}.${operation}: ${sure} ms (deneme ${attempt + 1})`);
+            return sonuc;
           } catch (err) {
-            if (attempt >= RETRY_DELAYS_MS.length || !isConnectionError(err)) throw err;
+            const baglanti = isConnectionError(err);
+            console.warn(
+              `[db] ${model ?? ""}.${operation} hata (deneme ${attempt + 1}, ${Date.now() - t0} ms, bağlantı hatası: ${baglanti}): ${String((err as Error)?.message ?? err).replace(/\s+/g, " ").slice(0, 200)}`,
+            );
+            if (attempt >= RETRY_DELAYS_MS.length || !baglanti) throw err;
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt]));
           }
         }
