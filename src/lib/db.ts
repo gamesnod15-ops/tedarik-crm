@@ -3,7 +3,9 @@ import { Prisma, PrismaClient } from "@prisma/client";
 // Veritabanına ulaşılamadığında (Neon uykudan uyanırken ya da ağ gecikmesinde) istek hata vermeden önce yeniden denenir.
 // Yalnızca "bağlantı kurulamadı" hataları yeniden denenir: bunlar sorgu çalışmadan önce oluştuğu için
 // yazma işleminin iki kez uygulanma riski yoktur.
-const RETRY_DELAYS_MS = [400, 1000, 2000, 3000];
+// Bağlantı zaman aşımı uzun olduğu için (aşağıda) tek deneme uyanmayı zaten bekler; bir kez daha denemek yeterli.
+// Daha fazla deneme, gerçek bir kesintide kullanıcıyı dakikalarca bekletirdi.
+const RETRY_DELAYS_MS = [1000];
 const CONNECTION_CODES = new Set(["P1001", "P1002"]);
 
 function isConnectionError(err: unknown) {
@@ -14,8 +16,27 @@ function isConnectionError(err: unknown) {
   return /Can't reach database server/i.test(String((err as Error | null)?.message ?? ""));
 }
 
+/**
+ * Bağlantı zaman aşımları: Prisma'nın varsayılanları bağlantı için 5 sn, havuzdan bağlantı beklemek için 10 sn.
+ * Neon uykudan uyanırken 5 sn bazen yetmiyor; bağlantı kesilip baştan deneniyor, her deneme yine bekliyordu
+ * (girişte 14 sn'ye varan takılma). Adreste tanımlı değilse bağlantıya 15 sn, havuz beklemesine (bağlantıdan uzun olmalı)
+ * 20 sn verilir: tek deneme uyanmayı bekler. Ortam değişkeninde açıkça verilen değerler korunur.
+ */
+function databaseUrl() {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) return undefined;
+  try {
+    const url = new URL(raw);
+    if (!url.searchParams.has("connect_timeout")) url.searchParams.set("connect_timeout", "15");
+    if (!url.searchParams.has("pool_timeout")) url.searchParams.set("pool_timeout", "20");
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function createClient() {
-  return new PrismaClient().$extends({
+  return new PrismaClient({ datasourceUrl: databaseUrl() }).$extends({
     query: {
       async $allOperations({ model, operation, args, query }) {
         const basla = Date.now();
