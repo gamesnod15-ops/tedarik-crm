@@ -36,7 +36,7 @@ export default async function YeniSiparisPage({ searchParams }: { searchParams: 
           {kopya && <p className="mt-0.5 text-sm text-slate-500">#{kopya.no} numaralı siparişten kopyalandı. Tarihi ve fiyatları kontrol edip kaydedin.</p>}
         </div>
         {/* Listede olmayan ürün için formdan ayrılmadan ürün eklenir; kaydedince listeye gelir. */}
-        <RecordDialog variant="secondary" label="+ Yeni ürün" title="Yeni ürün" fields={urunFields} initial={urunVarsayilan} action={saveUrunAction} />
+        <RecordDialog variant="secondary" label="Yeni ürün" title="Yeni ürün" fields={urunFields} initial={urunVarsayilan} action={saveUrunAction} />
       </header>
       <SiparisForm
         tip={tip}

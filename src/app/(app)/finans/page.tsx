@@ -14,6 +14,7 @@ import type { Option } from "@/components/entity-form";
 import { deleteMasrafAction, deleteOdemeAction, saveMasrafAction, saveOdemeAction } from "./actions";
 import { TekrarlayanBolumu } from "./tekrarlayan";
 import { ISLEM_TIPI_LABELS, ODEME_SEKLI_LABELS, masrafFields, odemeFields } from "./fields";
+import { SegmentFilter } from "@/components/segment-filter";
 
 type SP = { tip?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string; yeni?: string };
 
@@ -40,7 +41,9 @@ function DateFilters({ sp, tip }: { sp: SP; tip: string }) {
 }
 
 // ── Tahsilat / Ödeme ──
-async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFilter; canWrite: boolean; hasFilter: boolean }) {
+type BolumProps = { sp: SP; page: number; tarih?: Prisma.DateTimeFilter; canWrite: boolean; hasFilter: boolean; baslik: React.ReactNode };
+
+async function OdemeBolumu(p: BolumProps) {
   const where: Prisma.OdemeWhereInput = {
     ...(p.tarih && { tarih: p.tarih }),
     ...((p.sp.q || p.sp.cariTipi === "MUSTERI" || p.sp.cariTipi === "TEDARIKCI") && {
@@ -70,11 +73,8 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-          <Total label="Tahsilat toplamı" value={formatMoney(tahsilat)} tone="text-emerald-700" />
-          <Total label="Ödeme toplamı" value={formatMoney(odeme)} tone="text-red-700" />
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {p.baslik}
         {p.canWrite && (
           <RecordDialog
             autoOpen={p.sp.yeni === "1"}
@@ -85,26 +85,17 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
             action={saveOdemeAction}
           />
         )}
+      </header>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+        <Total label="Tahsilat toplamı" value={formatMoney(tahsilat)} tone="text-emerald-700" />
+        <Total label="Ödeme toplamı" value={formatMoney(odeme)} tone="text-red-700" />
       </div>
 
       <AutoForm className="toolbar">
         <DateFilters sp={p.sp} tip="ODEME" />
-        <div>
-          <label className="label" htmlFor="cariTipi">Cari tipi</label>
-          <select id="cariTipi" name="cariTipi" defaultValue={p.sp.cariTipi ?? ""} className="input">
-            <option value="">Tümü</option>
-            <option value="MUSTERI">Müşteri</option>
-            <option value="TEDARIKCI">Tedarikçi</option>
-          </select>
-        </div>
-        <div>
-          <label className="label" htmlFor="islem">İşlem tipi</label>
-          <select id="islem" name="islem" defaultValue={p.sp.islem ?? ""} className="input">
-            <option value="">Tümü</option>
-            <option value="TAHSILAT">Tahsilat</option>
-            <option value="ODEME">Ödeme</option>
-          </select>
-        </div>
+        <SegmentFilter name="cariTipi" label="Cari tipi" value={p.sp.cariTipi} options={[{ value: "MUSTERI", label: "Müşteri" }, { value: "TEDARIKCI", label: "Tedarikçi" }]} />
+        <SegmentFilter name="islem" label="İşlem tipi" value={p.sp.islem} options={[{ value: "TAHSILAT", label: "Tahsilat" }, { value: "ODEME", label: "Ödeme" }]} />
         <SearchInput defaultValue={p.sp.q ?? ""} placeholder="Cari unvanı" className="w-64" />
         <button className="sr-only">Filtrele</button>
         {p.hasFilter && <Link href="?tip=ODEME" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
@@ -112,7 +103,7 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">Cari</th>
@@ -123,7 +114,7 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((o) => (
               <tr key={o.id}>
@@ -175,7 +166,7 @@ async function OdemeBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFil
 }
 
 // ── Masraflar ──
-async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFilter; canWrite: boolean; hasFilter: boolean }) {
+async function MasrafBolumu(p: BolumProps) {
   const where: Prisma.MasrafWhereInput = {
     ...(p.tarih && { tarih: p.tarih }),
     ...(p.sp.q && {
@@ -193,8 +184,8 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <Total label="Masraf toplamı" value={formatMoney(sum._sum.tutar ?? 0)} tone="text-red-700" />
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {p.baslik}
         {p.canWrite && (
           <RecordDialog
             autoOpen={p.sp.yeni === "1"}
@@ -205,7 +196,9 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
             action={saveMasrafAction}
           />
         )}
-      </div>
+      </header>
+
+      <Total label="Masraf toplamı" value={formatMoney(sum._sum.tutar ?? 0)} tone="text-red-700" />
 
       <AutoForm className="toolbar">
         <DateFilters sp={p.sp} tip="MASRAF" />
@@ -216,7 +209,7 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">Açıklama</th>
@@ -226,7 +219,7 @@ async function MasrafBolumu(p: { sp: SP; page: number; tarih?: Prisma.DateTimeFi
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((m) => (
               <tr key={m.id}>
@@ -279,25 +272,27 @@ export default async function FinansPage({ searchParams }: { searchParams: Promi
   const to = parseDateInput(sp.to);
   const tarih: Prisma.DateTimeFilter | undefined = from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
   const hasFilter = !!(sp.from || sp.to || sp.q || sp.cariTipi || sp.islem);
+  // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için başlık satırını bölümler oluşturur.
+  const baslik = (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Finans</h1>
+      <QueryTabs
+        param="tip"
+        items={[
+          { value: "ODEME", label: "Tahsilat / Ödeme" },
+          { value: "MASRAF", label: "Masraflar" },
+        ]}
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-3">
-      <header className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">Finans</h1>
-        <QueryTabs
-          param="tip"
-          items={[
-            { value: "ODEME", label: "Tahsilat / Ödeme" },
-            { value: "MASRAF", label: "Masraflar" },
-          ]}
-        />
-      </header>
-
 
       {tip === "ODEME" ? (
-        <OdemeBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} />
+        <OdemeBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       ) : (
-        <MasrafBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} />
+        <MasrafBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       )}
     </div>
   );

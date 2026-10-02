@@ -41,9 +41,9 @@ export default async function AdminHome() {
 
       <section>
         <div className="card overflow-hidden">
-          <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold">Son etkinlikler</h2>
+          <h2 className="border-b border-slate-300 px-5 py-3 text-sm font-semibold">Son etkinlikler</h2>
           <table className="w-full">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {recent.length === 0 && (
                 <tr><td className="td text-slate-400">Henüz kayıt yok.</td></tr>
               )}

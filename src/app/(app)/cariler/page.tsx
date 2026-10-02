@@ -13,6 +13,7 @@ import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteCariAction, saveCariAction } from "./actions";
 import { CARI_TIP_LABELS, cariFieldsFor } from "./fields";
+import { SegmentFilter } from "@/components/segment-filter";
 
 type SP = { tip?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
@@ -73,21 +74,14 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value={tipi} />
         <SearchInput defaultValue={sp.q ?? ""} placeholder="Unvan, yetkili veya telefon" className="w-72" />
-        <div>
-          <label className="label" htmlFor="durum">Durum</label>
-          <select id="durum" name="durum" defaultValue={sp.durum ?? ""} className="input">
-            <option value="">Tümü</option>
-            <option value="aktif">Aktif</option>
-            <option value="pasif">Pasif</option>
-          </select>
-        </div>
+        <SegmentFilter name="durum" label="Durum" value={sp.durum} options={[{ value: "aktif", label: "Aktif" }, { value: "pasif", label: "Pasif" }]} />
         <button className="sr-only">Filtrele</button>
         {(sp.q || sp.durum) && <Link href={`?tip=${tipi}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Unvan</th>
               <th className="th">Yetkili</th>
@@ -97,7 +91,7 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && (
               <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>
             )}

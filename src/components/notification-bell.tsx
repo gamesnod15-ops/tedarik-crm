@@ -19,7 +19,7 @@ export type NotificationItem = {
 };
 
 const DOT: Record<NotificationItem["tur"], string> = {
-  BILGI: "bg-petrol-500",
+  BILGI: "bg-brand-500",
   BASARI: "bg-emerald-500",
   UYARI: "bg-amber-500",
   HATA: "bg-red-500",
@@ -88,8 +88,8 @@ export function NotificationBell({ unread, items }: { unread: number; items: Not
       </button>
 
       {open && (
-        <div role="dialog" aria-label="Bildirimler" className="absolute right-0 top-full z-30 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div role="dialog" aria-label="Bildirimler" className="absolute right-0 top-full z-30 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-lg">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">Bildirimler</h2>
             {unread > 0 && (
               <button
@@ -103,14 +103,14 @@ export function NotificationBell({ unread, items }: { unread: number; items: Not
             )}
           </div>
 
-          <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
+          <ul className="max-h-96 divide-y divide-slate-200 overflow-y-auto">
             {items.length === 0 && <li className="px-4 py-10 text-center text-sm text-slate-400">Bildirim yok.</li>}
             {items.map((n) => (
               <li key={n.id}>
                 <button
                   type="button"
                   onClick={() => openItem(n)}
-                  className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 ${n.read ? "" : "bg-petrol-50/50"}`}
+                  className={`flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 ${n.read ? "" : "bg-brand-50/60"}`}
                 >
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-slate-300" : DOT[n.tur]}`} />
                   <span className="min-w-0 flex-1">
@@ -124,7 +124,7 @@ export function NotificationBell({ unread, items }: { unread: number; items: Not
           </ul>
 
           {hasRead && (
-            <div className="border-t border-slate-100 px-4 py-2 text-right">
+            <div className="border-t border-slate-200 px-4 py-2 text-right">
               <button
                 type="button"
                 disabled={pending}

@@ -214,8 +214,8 @@ export function SiparisForm({
         )}
 
         <div className="card overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-slate-200 bg-slate-50">
+          <table className="kalem-tablo w-full">
+            <thead className="border-b border-slate-300 bg-slate-50">
               <tr>
                 <th className="th min-w-56">Ürün</th>
                 <th className="th w-28">Adet</th>
@@ -225,7 +225,7 @@ export function SiparisForm({
                 <th className="th w-10" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {rows.map((r, i) => {
                 const son = r.urunId ? sonFiyat[r.urunId] : undefined;
                 const farkli = son && num(son.fiyat) !== num(r.birimFiyat);
@@ -269,7 +269,7 @@ export function SiparisForm({
               })}
             </tbody>
           </table>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 p-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-200 p-3">
             <button type="button" onClick={() => setRows((p) => [...p, emptyRow()])} className="text-sm font-medium text-petrol-700 hover:underline">
               + Satır ekle
             </button>
@@ -279,10 +279,10 @@ export function SiparisForm({
           </div>
         </div>
 
-        <div className="ml-auto w-full max-w-xs space-y-1 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <div className="ml-auto w-full max-w-xs space-y-1 rounded-xl border border-slate-300 bg-white p-4 text-sm">
           <div className="flex justify-between text-slate-600"><span>Ara toplam</span><span className="tabular-nums">{money.format(ara)} TL</span></div>
           <div className="flex justify-between text-slate-600"><span>KDV</span><span className="tabular-nums">{money.format(kdv)} TL</span></div>
-          <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-semibold text-slate-900"><span>Genel toplam</span><span className="tabular-nums">{money.format(genel)} TL</span></div>
+          <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900"><span>Genel toplam</span><span className="tabular-nums">{money.format(genel)} TL</span></div>
         </div>
 
         {state?.error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
@@ -320,7 +320,7 @@ export function SiparisForm({
               <input id="paste-kdv" type="number" step="1" min="0" max="100" value={pasteKdv} onChange={(e) => setPasteKdv(e.target.value)} placeholder="Ör. 10" className="input" />
             </div>
             <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
-              <input type="checkbox" checked={olustur} onChange={(e) => setOlustur(e.target.checked)} className="h-4 w-4 accent-petrol-600" />
+              <input type="checkbox" checked={olustur} onChange={(e) => setOlustur(e.target.checked)} className="h-4 w-4 accent-brand-600" />
               Kayıtlı olmayan ürünleri otomatik oluştur
             </label>
           </div>
@@ -329,7 +329,7 @@ export function SiparisForm({
           {onizleme.list.length > 0 && (
             <div className="card max-h-64 overflow-auto">
               <table className="w-full">
-                <thead className="sticky top-0 border-b border-slate-200 bg-slate-50">
+                <thead className="sticky top-0 border-b border-slate-300 bg-slate-50">
                   <tr>
                     <th className="th">Ürün / model</th>
                     <th className="th text-right">Adet</th>
@@ -338,7 +338,7 @@ export function SiparisForm({
                     <th className="th">Durum</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {onizleme.list.map((l, i) => (
                     <tr key={i}>
                       <td className="td">{l.ad}</td>

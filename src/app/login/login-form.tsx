@@ -18,7 +18,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         <input id="password" name="password" type="password" autoComplete="current-password" required placeholder="Şifreniz" className="input" />
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-600">
-        <input type="checkbox" name="remember" className="h-4 w-4 accent-petrol-600" />
+        <input type="checkbox" name="remember" className="h-4 w-4 accent-brand-600" />
         Beni hatırla
       </label>
       {state?.error && (
@@ -29,7 +29,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <button type="submit" disabled={pending} className="btn-primary w-full">
         {pending ? "Giriş yapılıyor…" : "Giriş yap"}
       </button>
-      <p className="flex items-start gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
+      <p className="flex items-start gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500">
         <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 text-petrol-600" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <rect x="4" y="11" width="16" height="10" rx="2" />
           <path d="M8 11V7a4 4 0 0 1 8 0v4" />

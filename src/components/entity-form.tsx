@@ -101,7 +101,7 @@ export function EntityForm({
                   name={f.name}
                   checked={values[f.name] === "on"}
                   onChange={(e) => set(f.name, e.target.checked ? "on" : "")}
-                  className="h-4 w-4 accent-petrol-600"
+                  className="h-4 w-4 accent-brand-600"
                 />
                 {f.label}
               </label>

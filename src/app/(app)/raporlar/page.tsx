@@ -69,7 +69,7 @@ async function GenelRapor({ sp }: { sp: SP }) {
 
       <section className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">Tür</th>
@@ -78,7 +78,7 @@ async function GenelRapor({ sp }: { sp: SP }) {
               <th className="th text-right">Tutar</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {satirlar.length === 0 && <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Bu tarih aralığında hareket yok.</td></tr>}
             {satirlar.map((r) => (
               <tr key={r.key}>
@@ -144,7 +144,7 @@ async function AySonuEkstreleri({ sp }: { sp: SP }) {
 
       <section className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">{musteri ? "Müşteri" : "Tedarikçi"}</th>
               <th className="th text-right">Devreden</th>
@@ -154,7 +154,7 @@ async function AySonuEkstreleri({ sp }: { sp: SP }) {
               <th className="th print:hidden" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {ekstreler.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Bu dönemde hareketi ya da bakiyesi olan kayıt yok.</td></tr>}
             {ekstreler.map((e) => (
               <tr key={e.cari.id}>
@@ -172,7 +172,7 @@ async function AySonuEkstreleri({ sp }: { sp: SP }) {
             ))}
           </tbody>
           {ekstreler.length > 0 && (
-            <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+            <tfoot className="border-t-2 border-slate-300 bg-slate-50">
               <tr>
                 <td className="td font-semibold">Toplam ({ekstreler.length} kayıt)</td>
                 <td className="td text-right font-semibold tabular-nums">{formatMoney(toplam.devreden)}</td>

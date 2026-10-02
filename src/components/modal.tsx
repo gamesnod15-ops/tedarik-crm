@@ -32,10 +32,10 @@ export function Modal({
         if (e.target === ref.current) onClose();
       }}
       aria-label={title}
-      className={`m-auto w-full ${size === "xl" ? "max-w-5xl" : "max-w-xl"} rounded-xl border border-slate-200 bg-white p-0 shadow-xl backdrop:bg-black/50`}
+      className={`m-auto w-full ${size === "xl" ? "max-w-5xl" : "max-w-xl"} rounded-xl border border-slate-300 bg-white p-0 shadow-xl backdrop:bg-black/50`}
     >
       {open && (
-        <div className="max-h-[85vh] overflow-y-auto p-6">
+        <div className="max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <div className="mb-5 flex items-start justify-between gap-4">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
             <button

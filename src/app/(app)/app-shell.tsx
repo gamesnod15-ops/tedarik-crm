@@ -1,9 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NotificationBell, type NotificationItem } from "@/components/notification-bell";
+import { GlobalSearch } from "@/components/global-search";
+import { MobileTables } from "@/components/mobile-tables";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { signOutAction } from "./sign-out";
 
@@ -101,11 +103,11 @@ export function AppShell({
   return (
     <div className="flex min-h-screen">
       <aside
-        className={`sticky top-0 flex h-screen shrink-0 flex-col print:hidden border-r border-slate-200 bg-white text-slate-600 transition-[width] duration-200 ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col md:flex print:hidden border-r border-slate-300 bg-white text-slate-600 transition-[width] duration-200 ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
-        <div className="flex h-14 shrink-0 items-center border-b border-slate-200 px-4">
+        <div className="flex h-14 shrink-0 items-center border-b border-slate-300 px-4">
           <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Ovox CRM">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {collapsed ? (
@@ -130,7 +132,7 @@ export function AppShell({
                 aria-label={l.label}
                 aria-current={l.active ? "page" : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
-                  l.active ? "bg-petrol-50 text-petrol-700" : "hover:bg-slate-100 hover:text-petrol-700"
+                  l.active ? "bg-brand-50 text-brand-700" : "hover:bg-slate-100 hover:text-brand-700"
                 } ${collapsed ? "justify-center px-0" : ""}`}
               >
                 {l.icon}
@@ -141,7 +143,7 @@ export function AppShell({
           {user.quick.length > 0 && (
             <div className="pt-3" aria-label="Hızlı erişim" role="group">
               {collapsed ? (
-                <div className="mx-2 mb-2 border-t border-slate-200" />
+                <div className="mx-2 mb-2 border-t border-slate-300" />
               ) : (
                 <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Hızlı erişim</p>
               )}
@@ -158,7 +160,7 @@ export function AppShell({
                   >
                     <span className="relative shrink-0">
                       {icons[q.icon]}
-                      <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-petrol-600 text-[#fff] ring-2 ring-white group-hover:bg-petrol-500">
+                      <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-600 text-[#fff] ring-2 ring-white group-hover:bg-brand-500">
                         <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" aria-hidden="true">
                           <path d="M12 5v14M5 12h14" />
                         </svg>
@@ -172,7 +174,7 @@ export function AppShell({
           )}
           </nav>
 
-        <footer className="shrink-0 border-t border-slate-200 px-3 py-3 text-center">
+        <footer className="shrink-0 border-t border-slate-300 px-3 py-3 text-center">
           {collapsed ? (
             <p
               className="text-[10px] leading-tight text-slate-400"
@@ -196,11 +198,18 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-      <header className="sticky top-0 z-20 flex h-14 print:hidden items-center gap-3 border-b border-slate-200 bg-white px-4">
+      <div className="sticky top-0 z-20 print:hidden">
+      <header className="flex h-14 items-center gap-2 border-b border-slate-300 bg-white px-3 sm:gap-3 sm:px-4">
+        <Link href="/" className="shrink-0 md:hidden" aria-label="Ovox CRM">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/ovox-crm-logo-dark.svg" alt="Ovox CRM" className="hidden h-4 w-auto dark:block" />
+        </Link>
         <button
           type="button"
           onClick={toggle}
-          className={iconBtn}
+          className={`${iconBtn} hidden md:flex`}
           aria-label={collapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"}
           aria-expanded={!collapsed}
           title={collapsed ? "Genişlet" : "Daralt"}
@@ -208,12 +217,9 @@ export function AppShell({
           {icons.panel}
         </button>
 
-        <form role="search" onSubmit={(e) => e.preventDefault()} className="relative w-full max-w-sm">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icons.search}</span>
-          <input type="search" name="q" placeholder="Ara…" aria-label="Ara" className="input pl-10" />
-        </form>
+        <GlobalSearch icon={icons.search} className="hidden md:block md:w-full md:max-w-sm" />
 
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
           <ThemeToggle className={iconBtn} />
           {user.canSettings && (
             <Link href="/settings" className={iconBtn} aria-label="Ayarlar" title="Ayarlar">
@@ -222,17 +228,17 @@ export function AppShell({
           )}
           {user.nav.length > 0 && <NotificationBell unread={notifications.unread} items={notifications.items} />}
 
-          <div ref={menuRef} className="relative ml-2">
+          <div ref={menuRef} className="relative ml-1 sm:ml-2">
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               aria-label="Hesap menüsü"
-              className="flex items-center gap-3 rounded-lg px-2 py-1 hover:bg-slate-100"
+              className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-slate-100 sm:px-2"
             >
               {/* Profil fotoğrafı alanı eklenene kadar baş harfli avatar gösterilir. */}
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-petrol-100 text-sm font-semibold text-petrol-700">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
                 {user.initials}
               </span>
               <span className="hidden text-left sm:block">
@@ -242,7 +248,7 @@ export function AppShell({
             </button>
 
             {menuOpen && (
-              <div role="menu" className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+              <div role="menu" className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-300 bg-white p-1 shadow-lg">
                 <Link
                   href="/account"
                   role="menuitem"
@@ -264,9 +270,45 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="min-w-0 flex-1 p-5 print:p-0">
+      {/* Mobil: kenar çubuğu yerine başlığın altında yatay kaydırılan menü. */}
+      <nav aria-label="Mobil menü" className="no-scrollbar flex gap-2 overflow-x-auto border-b border-slate-300 bg-white px-3 py-3 md:hidden">
+        {links.map((l) => (
+          <Link
+            key={l.href}
+            href={l.href}
+            aria-current={l.active ? "page" : undefined}
+            ref={(el) => {
+              if (el && l.active) el.scrollIntoView({ inline: "center", block: "nearest" });
+            }}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium ${
+              l.active ? "border-brand-600 bg-brand-600 text-[#fff]" : "border-slate-300 text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span className="[&>svg]:h-4 [&>svg]:w-4">{l.icon}</span>
+            {l.label}
+          </Link>
+        ))}
+        {user.quick.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-brand-600/50 px-3.5 py-1.5 text-sm font-medium text-brand-700 hover:bg-slate-100"
+          >
+            <span className="text-base leading-none">+</span>
+            {q.label}
+          </Link>
+        ))}
+      </nav>
+      </div>
+
+      <main className="min-w-0 flex-1 px-4 py-5 sm:p-5 print:p-0">
+        <MobileTables />
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
+
+      <footer className="px-4 pb-4 text-center text-[11px] text-slate-400 md:hidden print:hidden">
+        Ovox Dijital tarafından geliştirildi. © {new Date().getFullYear()} · v{VERSION}
+      </footer>
       </div>
     </div>
   );

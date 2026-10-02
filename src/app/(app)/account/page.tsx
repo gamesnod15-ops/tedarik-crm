@@ -59,22 +59,22 @@ export default async function AccountPage() {
 
       <div className="grid items-start gap-5 lg:grid-cols-3">
         <aside className="card overflow-hidden lg:sticky lg:top-20">
-          <div className="h-20 bg-gradient-to-r from-petrol-800 to-petrol-500" />
+          <div className="h-20 bg-gradient-to-r from-brand-800 to-brand-500" />
           <div className="px-6 pb-6">
-            <div className="-mt-10 flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-petrol-100 text-2xl font-semibold text-petrol-700">
+            <div className="-mt-10 flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-brand-100 text-2xl font-semibold text-brand-700">
               {initials(record.name)}
             </div>
             <h2 className="mt-3 text-lg font-semibold text-slate-900">{record.name}</h2>
             <p className="truncate text-sm text-slate-500">{record.email}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="badge bg-petrol-50 text-petrol-700">{ROLE_LABELS[record.role]}</span>
+              <span className="badge bg-slate-100 text-slate-700">{ROLE_LABELS[record.role]}</span>
               <span className={`badge ${record.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                 {record.isActive ? "Aktif" : "Pasif"}
               </span>
             </div>
             <p className="mt-3 text-sm text-slate-500">{ROLE_DESCRIPTIONS[record.role]}</p>
 
-            <dl className="mt-4 divide-y divide-slate-100 border-t border-slate-100">
+            <dl className="mt-4 divide-y divide-slate-200 border-t border-slate-200">
               <Fact label="Son giriş" value={formatDateTime(record.lastLoginAt)} />
               <Fact label="Üyelik tarihi" value={formatDateTime(record.createdAt)} />
               <Fact label="Yetki sayısı" value={permissions.length} />
@@ -105,10 +105,10 @@ export default async function AccountPage() {
             {activity.length === 0 ? (
               <p className="text-sm text-slate-400">Henüz etkinlik yok.</p>
             ) : (
-              <ol className="relative space-y-4 border-l border-slate-200 pl-5">
+              <ol className="relative space-y-4 border-l border-slate-300 pl-5">
                 {activity.map((a) => (
                   <li key={a.id} className="relative">
-                    <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-petrol-500 ring-1 ring-petrol-200" />
+                    <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-500 ring-1 ring-brand-200" />
                     <p className="text-sm font-medium text-slate-900">{actionLabel(a.action)}</p>
                     <p className="text-xs text-slate-500">
                       {formatDateTime(a.createdAt)}

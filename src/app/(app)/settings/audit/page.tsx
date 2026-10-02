@@ -51,7 +51,7 @@ export default async function AuditPage({
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">İşlem</th>
@@ -60,7 +60,7 @@ export default async function AuditPage({
               <th className="th">IP</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {logs.length === 0 && (
               <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Kayıt yok.</td></tr>
             )}

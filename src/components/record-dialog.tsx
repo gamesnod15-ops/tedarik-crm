@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormState } from "@/lib/crud";
 import { EntityForm, type Field, type Values } from "./entity-form";
 import { Modal } from "./modal";
+import { PlusIcon } from "@/components/plus-icon";
 
 /** Bir butona basınca açılan ekleme/düzenleme penceresi. Kayıt başarılı olunca kapanır, sayfa verisi yenilenir. */
 export function RecordDialog({
@@ -51,6 +52,7 @@ export function RecordDialog({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={cls}>
+        {variant !== "link" && label.startsWith("Yeni") && <PlusIcon />}
         {label}
       </button>
       <Modal open={open} onClose={close} title={title}>

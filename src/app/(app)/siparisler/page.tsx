@@ -16,6 +16,7 @@ import { deleteAlimAction, deleteSiparisAction, saveAlimAction, setSiparisDurumA
 import { DURUMLAR, DURUM_BADGE, DURUM_LABELS, isDurum } from "./durum";
 import { DurumSelect } from "./durum-select";
 import { alimFields } from "./alim-fields";
+import { PlusIcon } from "@/components/plus-icon";
 
 type SP = { tip?: string; from?: string; to?: string; q?: string; durum?: string; page?: string; yeni?: string };
 
@@ -60,7 +61,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-      <div className="flex flex-wrap items-center gap-1.5" aria-label="Duruma göre filtrele">
+      <div className="durum-chips flex flex-wrap items-center gap-1.5" aria-label="Duruma göre filtrele">
         <Link
           href={`?${new URLSearchParams({ tip, ...(sp.q && { q: sp.q }), ...(sp.from && { from: sp.from }), ...(sp.to && { to: sp.to }) })}`}
           className={`badge px-2 py-0.5 ${!durum ? "bg-slate-900 text-slate-50" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
@@ -78,7 +79,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
           </Link>
         ))}
       </div>
-      <AutoForm className="toolbar ml-auto flex-nowrap">
+      <AutoForm className="toolbar ml-auto md:flex-nowrap">
         <DateFilters sp={sp} tip={tip} />
         {durum && <input type="hidden" name="durum" value={durum} />}
         <SearchInput defaultValue={sp.q ?? ""} placeholder={tip === "MUSTERI" ? "Müşteri ara…" : "Tedarikçi ara…"} className="w-52" />
@@ -89,7 +90,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">No</th>
               <th className="th">Tarih</th>
@@ -100,7 +101,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((s) => {
               const adlar = [...new Set(s.kalemler.map((k) => k.urun.ad))];
@@ -193,7 +194,7 @@ async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWr
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">Tedarikçi</th>
@@ -204,7 +205,7 @@ async function AlimListesi({ sp, page, canWrite }: { sp: SP; page: number; canWr
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((a) => (
               <tr key={a.id}>
@@ -272,7 +273,7 @@ export default async function SiparislerPage({ searchParams }: { searchParams: P
         />
         </div>
         {canWrite && tip === "MUSTERI" && (
-          <Link href="/siparisler/yeni?tip=MUSTERI" className="btn-primary">Yeni sipariş</Link>
+          <Link href="/siparisler/yeni?tip=MUSTERI" className="btn-primary"><PlusIcon />Yeni sipariş</Link>
         )}
       </header>
 

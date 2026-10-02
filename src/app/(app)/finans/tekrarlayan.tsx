@@ -12,7 +12,7 @@ export async function TekrarlayanBolumu({ canWrite }: { canWrite: boolean }) {
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 px-5 py-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Tekrarlayan masraflar</h2>
           <p className="text-xs text-slate-500">Kira, elektrik, maaş gibi her ay tekrarlanan masraflar ayın belirlenen gününde kendiliğinden kaydedilir.</p>
@@ -34,7 +34,7 @@ export async function TekrarlayanBolumu({ canWrite }: { canWrite: boolean }) {
 
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Açıklama</th>
               <th className="th">Kategori</th>
@@ -45,7 +45,7 @@ export async function TekrarlayanBolumu({ canWrite }: { canWrite: boolean }) {
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {sablonlar.length === 0 && (
               <tr><td colSpan={7} className="td py-6 text-center text-slate-400">Henüz tekrarlayan masraf yok.</td></tr>
             )}

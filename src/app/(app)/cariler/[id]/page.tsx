@@ -72,7 +72,7 @@ export default async function CariDetayPage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight text-slate-900">{cari.unvan}</h1>
-              <span className="badge bg-petrol-50 text-petrol-700">{label}</span>
+              <span className="badge bg-slate-100 text-slate-700">{label}</span>
               {!cari.isActive && <span className="badge bg-slate-100 text-slate-600">Pasif</span>}
             </div>
             <p className="mt-1 text-sm text-slate-500">
@@ -178,11 +178,11 @@ export default async function CariDetayPage({
       )}
 
       <section className="card overflow-x-auto">
-        <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold">
+        <h2 className="border-b border-slate-300 px-5 py-3 text-sm font-semibold">
           Hesap ekstresi · {donemAdi(donem)}
         </h2>
-        <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+        <table data-no-kart className="w-full">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">{musteri ? "Model" : "Açıklama"}</th>
@@ -195,7 +195,7 @@ export default async function CariDetayPage({
               <th className="th text-right">Bakiye</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             <tr className="bg-amber-50/70">
               <td className="td" />
               <td className="td font-semibold" colSpan={7}>{aylik ? "Devreden (önceki aydan)" : "Açılış bakiyesi"}</td>
@@ -225,7 +225,7 @@ export default async function CariDetayPage({
               </tr>
             ))}
           </tbody>
-          <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+          <tfoot className="border-t-2 border-slate-300 bg-slate-50">
             <tr>
               <td className="td font-semibold" colSpan={4}>Dönem toplamı</td>
               <td className={`${num} font-semibold`}>{musteri ? formatMoney(ekstre.toplamTutar) : ""}</td>

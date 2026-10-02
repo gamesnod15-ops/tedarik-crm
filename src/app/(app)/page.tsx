@@ -92,7 +92,7 @@ export default async function OzetPage() {
       </section>
 
       <section className="card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 px-5 py-3">
           <h2 className="text-sm font-semibold">
             Vadesi geçen alacaklar
             {vadesiGecenler.length > 0 && <span className="ml-2 badge bg-red-50 text-red-700">{vadesiGecenler.length} müşteri</span>}
@@ -107,7 +107,7 @@ export default async function OzetPage() {
           <p className="px-5 py-6 text-center text-sm text-slate-400">Vadesi geçen alacak yok.</p>
         ) : (
           <table className="w-full">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {vadesiGecenler.slice(0, 6).map((v) => (
                 <tr key={v.cariId}>
                   <td className="td">
@@ -122,17 +122,17 @@ export default async function OzetPage() {
             </tbody>
           </table>
         )}
-        {vadesiGecenler.length > 6 && <p className="border-t border-slate-100 px-5 py-2 text-xs text-slate-500">+{vadesiGecenler.length - 6} müşteri daha. Cariler sayfasından tümüne bakın.</p>}
+        {vadesiGecenler.length > 6 && <p className="border-t border-slate-200 px-5 py-2 text-xs text-slate-500">+{vadesiGecenler.length - 6} müşteri daha. Cariler sayfasından tümüne bakın.</p>}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+          <div className="flex items-center justify-between border-b border-slate-300 px-5 py-3">
             <h2 className="text-sm font-semibold">Son siparişler ve alımlar</h2>
             <Link href="/siparisler" className="text-sm text-petrol-700 hover:underline">Tümü</Link>
           </div>
           <table className="w-full">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {sonHareketler.length === 0 && <tr><td className="td py-6 text-center text-slate-400">Henüz kayıt yok.</td></tr>}
               {sonHareketler.map((h) => (
                 <tr key={h.key}>
@@ -149,12 +149,12 @@ export default async function OzetPage() {
         </div>
 
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+          <div className="flex items-center justify-between border-b border-slate-300 px-5 py-3">
             <h2 className="text-sm font-semibold">Son tahsilat ve ödemeler</h2>
             <Link href="/finans" className="text-sm text-petrol-700 hover:underline">Tümü</Link>
           </div>
           <table className="w-full">
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-200">
               {sonOdemeler.length === 0 && <tr><td className="td py-6 text-center text-slate-400">Henüz kayıt yok.</td></tr>}
               {sonOdemeler.map((o) => (
                 <tr key={o.id}>

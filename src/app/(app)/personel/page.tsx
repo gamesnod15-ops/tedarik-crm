@@ -12,6 +12,7 @@ import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import type { Field } from "@/components/entity-form";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
+import { SegmentFilter } from "@/components/segment-filter";
 
 type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; page?: string };
 
@@ -86,21 +87,14 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value="KART" />
         <SearchInput defaultValue={sp.q ?? ""} placeholder="Ad, sicil no veya departman" className="w-72" />
-        <div>
-          <label className="label" htmlFor="durum">Durum</label>
-          <select id="durum" name="durum" defaultValue={sp.durum ?? ""} className="input">
-            <option value="">Tümü</option>
-            <option value="AKTIF">Aktif</option>
-            <option value="PASIF">Pasif</option>
-          </select>
-        </div>
+        <SegmentFilter name="durum" label="Durum" value={sp.durum} options={[{ value: "AKTIF", label: "Aktif" }, { value: "PASIF", label: "Pasif" }]} />
         <button className="sr-only">Filtrele</button>
         {(sp.q || sp.durum) && <Link href="?tip=KART" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
               <th className="th">Sicil no</th>
@@ -111,7 +105,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
@@ -156,7 +150,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
   );
 }
 
-async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
+async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: number; canWrite: boolean; baslik: React.ReactNode }) {
   const from = parseDateInput(sp.from);
   const to = parseDateInput(sp.to);
   const where: Prisma.PersonelHareketWhereInput = {
@@ -181,7 +175,8 @@ async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; can
 
   return (
     <>
-      <div className="flex justify-end">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {baslik}
         {canWrite && (
           <RecordDialog
             label="Yeni hareket"
@@ -191,7 +186,7 @@ async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; can
             action={saveHareketAction}
           />
         )}
-      </div>
+      </header>
 
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value="HAREKET" />
@@ -202,14 +197,7 @@ async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; can
             {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
-        <div>
-          <label className="label" htmlFor="tur">Tür</label>
-          <select id="tur" name="tur" defaultValue={sp.tur ?? ""} className="input">
-            <option value="">Tümü</option>
-            <option value="GIRIS_CIKIS">Giriş / Çıkış</option>
-            <option value="IZIN">İzin</option>
-          </select>
-        </div>
+        <SegmentFilter name="tur" label="Tür" value={sp.tur} options={[{ value: "GIRIS_CIKIS", label: "Giriş / Çıkış" }, { value: "IZIN", label: "İzin" }]} />
         <div>
           <label className="label" htmlFor="from">Tarih</label>
           <input id="from" name="from" type="date" defaultValue={sp.from} aria-label="Başlangıç tarihi" className="input" />
@@ -222,7 +210,7 @@ async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; can
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Tarih</th>
               <th className="th">Personel</th>
@@ -232,14 +220,14 @@ async function IsHareketleri({ sp, page, canWrite }: { sp: SP; page: number; can
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((h) => (
               <tr key={h.id}>
                 <td className="td whitespace-nowrap">{formatDate(h.tarih)}</td>
                 <td className="td font-medium text-slate-900">{h.personel.adSoyad}</td>
                 <td className="td">
-                  <span className={`badge ${h.islemTuru === "IZIN" ? "bg-amber-50 text-amber-700" : "bg-petrol-50 text-petrol-700"}`}>{TUR_LABELS[h.islemTuru]}</span>
+                  <span className={`badge ${h.islemTuru === "IZIN" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{TUR_LABELS[h.islemTuru]}</span>
                 </td>
                 <td className="td">
                   {h.islemTuru === "GIRIS_CIKIS"
@@ -290,20 +278,33 @@ export default async function PersonelPage({ searchParams }: { searchParams: Pro
   const page = pageOf(sp.page);
   const canWrite = can(user, "personel:write");
 
+  // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için İş Hareketleri kendi başlık satırını oluşturur.
+  const baslik = (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">Personel</h1>
+      <QueryTabs
+        param="tip"
+        items={[
+          { value: "KART", label: "Personel Kartları" },
+          { value: "HAREKET", label: "İş Hareketleri" },
+        ]}
+      />
+    </div>
+  );
+
+  if (tip === "HAREKET") {
+    return (
+      <div className="space-y-3">
+        <IsHareketleri sp={sp} page={page} canWrite={canWrite} baslik={baslik} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Personel</h1>
-        <QueryTabs
-          param="tip"
-          items={[
-            { value: "KART", label: "Personel Kartları" },
-            { value: "HAREKET", label: "İş Hareketleri" },
-          ]}
-        />
-        </div>
-        {canWrite && tip === "KART" && (
+        {baslik}
+        {canWrite && (
           <RecordDialog
             label="Yeni personel"
             title="Yeni personel"
@@ -315,7 +316,7 @@ export default async function PersonelPage({ searchParams }: { searchParams: Pro
       </header>
 
 
-      {tip === "KART" ? <PersonelKartlari sp={sp} page={page} canWrite={canWrite} /> : <IsHareketleri sp={sp} page={page} canWrite={canWrite} />}
+      <PersonelKartlari sp={sp} page={page} canWrite={canWrite} />
     </div>
   );
 }

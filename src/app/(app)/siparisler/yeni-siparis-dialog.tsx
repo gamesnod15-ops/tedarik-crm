@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { PlusIcon } from "@/components/plus-icon";
 import { Modal } from "@/components/modal";
 import type { FormState } from "@/lib/crud";
 import { SiparisForm } from "./siparis-form";
@@ -25,6 +26,7 @@ export function YeniSiparisDialog({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="btn-secondary">
+        <PlusIcon />
         Yeni sipariş
       </button>
       <Modal open={open} onClose={close} title={`Yeni sipariş · ${cari.unvan}`} size="xl">

@@ -24,7 +24,7 @@ export default async function RolesPage() {
             <span className="badge bg-slate-100 text-slate-600">{countByRole[r] ?? 0} kullanıcı</span>
           </div>
           <p className="mt-2 text-sm text-slate-500">{ROLE_DESCRIPTIONS[r]}</p>
-          <ul className="mt-4 divide-y divide-slate-100 text-sm">
+          <ul className="mt-4 divide-y divide-slate-200 text-sm">
             {PERMISSIONS.filter((p) => ROLE_PERMISSIONS[r].includes(p.key)).map((p) => (
               <li key={p.key} className="flex justify-between py-2">
                 <span>{p.label}</span>

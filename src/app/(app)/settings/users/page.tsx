@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { ROLE_LABELS } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/format";
+import { PlusIcon } from "@/components/plus-icon";
 
 type SP = { q?: string; status?: string };
 
@@ -36,7 +37,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-slate-500">{users.length} kayıt listeleniyor.</p>
         </div>
         {canWrite && (
-          <Link href="/settings/users/new" className="btn-primary">Yeni kullanıcı</Link>
+          <Link href="/settings/users/new" className="btn-primary"><PlusIcon />Yeni kullanıcı</Link>
         )}
       </header>
 
@@ -55,7 +56,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
 
       <div className="card overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-200 bg-slate-50">
+          <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Kullanıcı</th>
               <th className="th">Rol</th>
@@ -64,7 +65,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
               <th className="th" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-200">
             {users.length === 0 && (
               <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Kullanıcı bulunamadı.</td></tr>
             )}
@@ -77,7 +78,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     <p className="text-xs text-slate-500">{u.email}</p>
                   </td>
                   <td className="td">
-                    <span className="badge bg-petrol-50 text-petrol-700">{ROLE_LABELS[u.role]}</span>
+                    <span className="badge bg-slate-100 text-slate-700">{ROLE_LABELS[u.role]}</span>
                   </td>
                   <td className="td">
                     {locked ? (

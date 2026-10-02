@@ -26,7 +26,7 @@ export function QueryTabs({
             aria-current={active ? "page" : undefined}
             className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition ${
               active
-                ? "bg-white text-petrol-700 shadow-sm ring-1 ring-slate-200"
+                ? "bg-white text-brand-700 shadow-sm ring-1 ring-slate-300"
                 : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
             }`}
           >

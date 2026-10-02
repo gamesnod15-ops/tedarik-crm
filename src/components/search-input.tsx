@@ -55,7 +55,7 @@ export function SearchInput({
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
         autoComplete="off"
-        className="h-9 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-8 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-petrol-500 focus:ring-2 focus:ring-petrol-200"
+        className="h-9 w-full rounded-lg border border-slate-400 bg-white pl-9 pr-8 text-sm text-slate-900 outline-none placeholder:text-slate-500 focus:border-petrol-500 focus:ring-2 focus:ring-petrol-200"
       />
       {value && (
         <button
