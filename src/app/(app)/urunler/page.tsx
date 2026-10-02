@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { formatMoney } from "@/lib/format";
+import { urunAnahtari } from "@/lib/paste";
 import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { RecordDialog } from "@/components/record-dialog";
@@ -29,9 +30,11 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
   const [rows, total, kullanim] = await Promise.all([
     db.urun.findMany({ where, orderBy: { ad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     db.urun.count({ where }),
-    db.siparisKalem.groupBy({ by: ["urunId"], _count: { _all: true } }),
+    db.siparisKalem.groupBy({ by: ["urunAdi"], _count: { _all: true } }),
   ]);
-  const kullanimSayisi = new Map(kullanim.map((k) => [k.urunId, k._count._all]));
+  // Siparişler ürün kartına bağlı değil: aynı adla (büyük/küçük harf ve boşluk farkı önemsiz) yazılan satırlar sayılır.
+  const kullanimSayisi = new Map<string, number>();
+  for (const k of kullanim) kullanimSayisi.set(urunAnahtari(k.urunAdi), (kullanimSayisi.get(urunAnahtari(k.urunAdi)) ?? 0) + k._count._all);
 
   return (
     <div className="space-y-3">
@@ -81,7 +84,7 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
                 <td className="td">{u.birim}</td>
                 <td className="td text-right tabular-nums">{formatMoney(u.birimFiyat)}</td>
                 <td className="td text-right tabular-nums">%{u.kdvOrani}</td>
-                <td className="td text-right tabular-nums text-slate-500">{kullanimSayisi.get(u.id) ?? 0}</td>
+                <td className="td text-right tabular-nums text-slate-500">{kullanimSayisi.get(urunAnahtari(u.ad)) ?? 0}</td>
                 <td className="td">
                   <span className={`badge ${u.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{u.isActive ? "Aktif" : "Pasif"}</span>
                 </td>
@@ -107,7 +110,7 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
                       <DeleteButton
                         action={deleteUrunAction}
                         id={u.id}
-                        confirmText={`"${u.ad}" silinsin mi? Siparişlerde kullanılan ürün silinemez; pasife alabilirsiniz.`}
+                        confirmText={`"${u.ad}" silinsin mi? Siparişler etkilenmez: ürün adı siparişlerde yazıldığı haliyle kalır.`}
                       />
                     </div>
                   )}

@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useId, useMemo, useState } from "react";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast";
 import type { FormState } from "@/lib/crud";
 import { siparisYapistirmaCoz, urunAnahtari } from "@/lib/paste";
 import { DURUMLAR, DURUM_LABELS, type SiparisDurumu } from "./durum";
-import { sonFiyatlarAction, urunleriHazirlaAction } from "./actions";
+import { sonFiyatlarAction } from "./actions";
 
 type Urun = { id: string; ad: string; birim: string; birimFiyat: string; kdvOrani: number };
-type Satir = { urunId: string; adet: string; birimFiyat: string; kdvOrani: string; aciklama: string };
+/** Ürün siparişe metin olarak yazılır (ürün kartına bağlı değil). oto: fiyat/KDV ürün kartından otomatik dolduruldu (elle değiştirilmedi). */
+type Satir = { urunAdi: string; adet: string; birimFiyat: string; kdvOrani: string; aciklama: string; oto?: boolean };
 
 export type SiparisInitial = {
   id?: string;
@@ -28,8 +29,8 @@ const num = (v: string) => {
 const money = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-const emptyRow = (): Satir => ({ urunId: "", adet: "1", birimFiyat: "", kdvOrani: "", aciklama: "" });
-const isEmptyRow = (r: Satir) => !r.urunId && !r.birimFiyat && !r.kdvOrani;
+const emptyRow = (): Satir => ({ urunAdi: "", adet: "1", birimFiyat: "", kdvOrani: "", aciklama: "" });
+const isEmptyRow = (r: Satir) => !r.urunAdi.trim() && !r.birimFiyat && !r.kdvOrani;
 
 export function SiparisForm({
   tip,
@@ -68,15 +69,11 @@ export function SiparisForm({
   const [durum, setDurum] = useState<SiparisDurumu>(initial.durum);
   const [rows, setRows] = useState<Satir[]>(initial.kalemler.length ? initial.kalemler : [emptyRow()]);
 
-  // Excel'den yapıştırırken oluşturulan yeni ürünler, sayfa yenilenene kadar burada tutulur.
-  const [ekUrunler, setEkUrunler] = useState<Urun[]>([]);
-  const tumUrunler = useMemo(() => {
-    const ids = new Set(urunler.map((u) => u.id));
-    return [...urunler, ...ekUrunler.filter((u) => !ids.has(u.id))];
-  }, [urunler, ekUrunler]);
-  const urunById = useMemo(() => new Map(tumUrunler.map((u) => [u.id, u])), [tumUrunler]);
+  // Ürün kartları yalnızca öneri ve varsayılan fiyat/KDV kaynağıdır: ad birebir eşleşirse (büyük/küçük harf önemsiz) kullanılır.
+  const katalog = useMemo(() => new Map(urunler.map((u) => [urunAnahtari(u.ad), u])), [urunler]);
+  const oneriListesi = useId();
 
-  // Müşterinin her ürün için en son kullandığı fiyat
+  // Müşterinin her ürün (adı) için en son kullandığı fiyat
   const [sonFiyat, setSonFiyat] = useState<Record<string, { fiyat: string; tarih: string }>>({});
   useEffect(() => {
     let iptal = false;
@@ -104,71 +101,62 @@ export function SiparisForm({
   function update(i: number, patch: Partial<Satir>) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
-  function pickUrun(i: number, urunId: string) {
-    const u = urunById.get(urunId);
-    // Fiyat: müşteriye en son kullanılan fiyat, yoksa ürünün kayıtlı fiyatı. KDV her zaman üründen gelir.
-    update(i, u ? { urunId, birimFiyat: sonFiyat[urunId]?.fiyat ?? u.birimFiyat, kdvOrani: String(u.kdvOrani) } : { urunId });
+  function urunYaz(i: number, urunAdi: string) {
+    const r = rows[i];
+    const anahtar = urunAnahtari(urunAdi);
+    const u = katalog.get(anahtar);
+    const son = sonFiyat[anahtar];
+    // Yazılan ad bir ürün kartıyla ya da bu müşterinin eski bir satırıyla eşleşirse fiyat/KDV dolar
+    // (fiyat: müşteriye en son kullanılan, yoksa kartın fiyatı). Elle girilmiş fiyat/KDV'nin üzerine yazılmaz.
+    const bos = r.oto || (!r.birimFiyat && !r.kdvOrani);
+    if (bos && (u || son)) {
+      update(i, { urunAdi, birimFiyat: son?.fiyat ?? u?.birimFiyat ?? r.birimFiyat, kdvOrani: u ? String(u.kdvOrani) : r.kdvOrani, oto: true });
+    } else if (r.oto) {
+      // Ad artık eşleşmiyor: otomatik doldurulan değerler başka ürüne ait kalmasın.
+      update(i, { urunAdi, birimFiyat: "", kdvOrani: "", oto: false });
+    } else {
+      update(i, { urunAdi });
+    }
   }
 
   // ── Excel'den yapıştır ──
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteKdv, setPasteKdv] = useState("");
-  const [olustur, setOlustur] = useState(true);
-  const [pasteBusy, setPasteBusy] = useState(false);
   const [pasteError, setPasteError] = useState("");
 
   const onizleme = useMemo(() => {
     const { satirlar: parsed, atlanan } = siparisYapistirmaCoz(pasteText);
-    const anahtarlar = new Map(tumUrunler.map((u) => [urunAnahtari(u.ad), u]));
     const list = parsed.map((p) => {
-      const u = anahtarlar.get(urunAnahtari(p.ad));
+      const anahtar = urunAnahtari(p.ad);
+      const u = katalog.get(anahtar);
       const kdvEtkin = p.kdv || (u ? String(u.kdvOrani) : pasteKdv.trim());
-      return { ...p, urun: u, fiyatEtkin: p.fiyat || u?.birimFiyat || "", kdvEtkin };
+      return { ...p, urun: u, fiyatEtkin: p.fiyat || sonFiyat[anahtar]?.fiyat || u?.birimFiyat || "", kdvEtkin };
     });
-    const yeniSayi = new Set(list.filter((l) => !l.urun).map((l) => urunAnahtari(l.ad))).size;
-    const kdvEksik = list.some((l) => !l.urun && !l.kdvEtkin);
-    return { list, atlanan, yeniSayi, kdvEksik };
-  }, [pasteText, pasteKdv, tumUrunler]);
+    const kdvEksik = list.some((l) => !l.kdvEtkin);
+    return { list, atlanan, kdvEksik };
+  }, [pasteText, pasteKdv, katalog, sonFiyat]);
 
-  async function yapistirmayiEkle() {
+  function yapistirmayiEkle() {
     setPasteError("");
     if (onizleme.list.length === 0) return setPasteError("Eklenecek satır bulunamadı.");
-    if (onizleme.yeniSayi > 0 && !olustur) return setPasteError("Kayıtlı olmayan ürünler var: yeni ürün olarak eklenmelerine izin verin ya da önce Ürünler sayfasından ekleyin.");
-    if (onizleme.kdvEksik) return setPasteError("Yeni ürünler için KDV oranı gerekli: yapıştırmaya 4. sütun olarak ekleyin ya da aşağıya varsayılan KDV girin.");
+    if (onizleme.kdvEksik) return setPasteError("Bazı satırlarda KDV oranı yok: yapıştırmaya 4. sütun olarak ekleyin ya da aşağıya varsayılan KDV girin.");
 
-    setPasteBusy(true);
-    try {
-      const yeniler = onizleme.list.filter((l) => !l.urun).map((l) => ({ ad: l.ad, fiyat: l.fiyat, kdv: l.kdvEtkin }));
-      let olusan = new Map<string, Urun>();
-      if (yeniler.length) {
-        const sonuc = await urunleriHazirlaAction(yeniler, olustur);
-        if (sonuc.error || !sonuc.urunler) return setPasteError(sonuc.error ?? "Ürünler hazırlanamadı.");
-        const urunler2 = sonuc.urunler.map((u) => ({ id: u.id, ad: u.ad, birim: u.birim, birimFiyat: u.birimFiyat, kdvOrani: u.kdvOrani }));
-        olusan = new Map(sonuc.urunler.map((u, i) => [u.anahtar, urunler2[i]]));
-        setEkUrunler((prev) => [...prev, ...urunler2.filter((u) => !prev.some((p) => p.id === u.id))]);
-      }
-
-      const yeniSatirlar: Satir[] = onizleme.list.map((l) => {
-        const u = l.urun ?? olusan.get(urunAnahtari(l.ad));
-        return {
-          urunId: u?.id ?? "",
-          adet: l.adet,
-          birimFiyat: l.fiyat || u?.birimFiyat || "0",
-          kdvOrani: l.kdv || (u ? String(u.kdvOrani) : l.kdvEtkin),
-          aciklama: "",
-        };
-      });
-      setRows((prev) => {
-        const kalan = prev.length === 1 && isEmptyRow(prev[0]) ? [] : prev;
-        return [...kalan, ...yeniSatirlar];
-      });
-      toast.success(`${yeniSatirlar.length} satır eklendi${olusan.size ? ` (${olusan.size} yeni ürün oluşturuldu)` : ""}.`);
-      setPasteOpen(false);
-      setPasteText("");
-    } finally {
-      setPasteBusy(false);
-    }
+    // Ürün adı satıra olduğu gibi yazılır; ürün kartı oluşturulmaz.
+    const yeniSatirlar: Satir[] = onizleme.list.map((l) => ({
+      urunAdi: l.ad,
+      adet: l.adet,
+      birimFiyat: l.fiyatEtkin || "0",
+      kdvOrani: l.kdvEtkin,
+      aciklama: "",
+    }));
+    setRows((prev) => {
+      const kalan = prev.length === 1 && isEmptyRow(prev[0]) ? [] : prev;
+      return [...kalan, ...yeniSatirlar];
+    });
+    toast.success(`${yeniSatirlar.length} satır eklendi.`);
+    setPasteOpen(false);
+    setPasteText("");
   }
 
   const cariLabel = tip === "MUSTERI" ? "Müşteri" : "Tedarikçi";
@@ -179,7 +167,7 @@ export function SiparisForm({
         {initial.id && <input type="hidden" name="id" value={initial.id} />}
         <input type="hidden" name="tip" value={tip} />
         {inline && <input type="hidden" name="inline" value="1" />}
-        <input type="hidden" name="kalemler" value={JSON.stringify(rows)} />
+        <input type="hidden" name="kalemler" value={JSON.stringify(rows.map(({ oto: _oto, ...r }) => r))} />
 
         <div className="card grid gap-4 p-4 sm:grid-cols-3">
           <div>
@@ -205,13 +193,10 @@ export function SiparisForm({
           </div>
         </div>
 
-        {tumUrunler.length === 0 && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Henüz ürün tanımlı değil. Sipariş girebilmek için önce{" "}
-            <Link href="/urunler" target={inline ? "_blank" : undefined} className="font-semibold underline">Ürünler</Link> sayfasından ürün ekleyin
-            {inline ? " (bu pencereyi kapatıp yeniden açın)" : ""}, ya da <strong>Excel'den yapıştır</strong> ile ürünleri otomatik oluşturun.
-          </p>
-        )}
+        {/* Kayıtlı ürün kartları yazarken öneri olarak çıkar; listede olmayan bir ad da yazılabilir. */}
+        <datalist id={oneriListesi}>
+          {urunler.map((u) => <option key={u.id} value={u.ad} />)}
+        </datalist>
 
         <div className="card overflow-x-auto">
           <table className="kalem-tablo w-full">
@@ -227,20 +212,28 @@ export function SiparisForm({
             </thead>
             <tbody className="divide-y divide-slate-200">
               {rows.map((r, i) => {
-                const son = r.urunId ? sonFiyat[r.urunId] : undefined;
+                const son = r.urunAdi.trim() ? sonFiyat[urunAnahtari(r.urunAdi)] : undefined;
                 const farkli = son && num(son.fiyat) !== num(r.birimFiyat);
                 return (
                   <tr key={i}>
                     <td className="td">
-                      <select value={r.urunId} onChange={(e) => pickUrun(i, e.target.value)} required aria-label="Ürün" className="input">
-                        <option value="">Ürün seçin…</option>
-                        {tumUrunler.map((u) => <option key={u.id} value={u.id}>{u.ad} ({u.birim})</option>)}
-                      </select>
+                      <input
+                        type="text"
+                        list={oneriListesi}
+                        value={r.urunAdi}
+                        onChange={(e) => urunYaz(i, e.target.value)}
+                        required
+                        maxLength={200}
+                        autoComplete="off"
+                        aria-label="Ürün"
+                        placeholder="Ürün adını yazın"
+                        className="input"
+                      />
                       {son && (
                         <p className="mt-1 text-[11px] text-slate-400">
                           Bu müşteriye son fiyat: {money.format(num(son.fiyat))} TL · {son.tarih}
                           {farkli && (
-                            <button type="button" onClick={() => update(i, { birimFiyat: son.fiyat })} className="ml-2 font-medium text-petrol-700 hover:underline">
+                            <button type="button" onClick={() => update(i, { birimFiyat: son.fiyat, oto: false })} className="ml-2 font-medium text-petrol-700 hover:underline">
                               Uygula
                             </button>
                           )}
@@ -251,10 +244,10 @@ export function SiparisForm({
                       <input type="number" step="0.001" min="0" value={r.adet} onChange={(e) => update(i, { adet: e.target.value })} required aria-label="Adet" placeholder="Adet" className="input" />
                     </td>
                     <td className="td align-top">
-                      <input type="number" step="0.01" min="0" value={r.birimFiyat} onChange={(e) => update(i, { birimFiyat: e.target.value })} required aria-label="Birim fiyat" placeholder="0,00" className="input" />
+                      <input type="number" step="0.01" min="0" value={r.birimFiyat} onChange={(e) => update(i, { birimFiyat: e.target.value, oto: false })} required aria-label="Birim fiyat" placeholder="0,00" className="input" />
                     </td>
                     <td className="td align-top">
-                      <input type="number" step="1" min="0" max="100" value={r.kdvOrani} onChange={(e) => update(i, { kdvOrani: e.target.value })} required aria-label="KDV oranı" placeholder="KDV %" className="input" />
+                      <input type="number" step="1" min="0" max="100" value={r.kdvOrani} onChange={(e) => update(i, { kdvOrani: e.target.value, oto: false })} required aria-label="KDV oranı" placeholder="KDV %" className="input" />
                     </td>
                     <td className="td text-right align-top font-medium tabular-nums">{money.format(satirlar[i].toplam)} TL</td>
                     <td className="td align-top">
@@ -314,17 +307,11 @@ export function SiparisForm({
             className="input font-mono text-xs"
           />
 
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-            <div className="w-40">
-              <label className="label" htmlFor="paste-kdv">Varsayılan KDV (%)</label>
-              <input id="paste-kdv" type="number" step="1" min="0" max="100" value={pasteKdv} onChange={(e) => setPasteKdv(e.target.value)} placeholder="Ör. 10" className="input" />
-            </div>
-            <label className="flex items-center gap-2 pb-2 text-sm text-slate-700">
-              <input type="checkbox" checked={olustur} onChange={(e) => setOlustur(e.target.checked)} className="h-4 w-4 accent-brand-600" />
-              Kayıtlı olmayan ürünleri otomatik oluştur
-            </label>
+          <div className="w-40">
+            <label className="label" htmlFor="paste-kdv">Varsayılan KDV (%)</label>
+            <input id="paste-kdv" type="number" step="1" min="0" max="100" value={pasteKdv} onChange={(e) => setPasteKdv(e.target.value)} placeholder="Ör. 10" className="input" />
           </div>
-          <p className="-mt-2 text-xs text-slate-500">Varsayılan KDV yalnızca KDV sütunu olmayan <em>yeni</em> ürünler için kullanılır. Kayıtlı ürünlerde ürünün KDV'si geçerlidir.</p>
+          <p className="-mt-2 text-xs text-slate-500">Varsayılan KDV, KDV sütunu olmayan ve ürün kartı bulunmayan satırlar için kullanılır. Ürün adları siparişe yazıldığı gibi eklenir; ürün kartı oluşturulmaz.</p>
 
           {onizleme.list.length > 0 && (
             <div className="card max-h-64 overflow-auto">
@@ -335,7 +322,7 @@ export function SiparisForm({
                     <th className="th text-right">Adet</th>
                     <th className="th text-right">Fiyat</th>
                     <th className="th text-right">KDV</th>
-                    <th className="th">Durum</th>
+                    <th className="th">Ürün kartı</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -346,11 +333,7 @@ export function SiparisForm({
                       <td className="td text-right tabular-nums">{l.fiyatEtkin ? money.format(num(l.fiyatEtkin)) : "—"}</td>
                       <td className="td text-right tabular-nums">{l.kdvEtkin ? `%${l.kdvEtkin}` : "—"}</td>
                       <td className="td">
-                        {l.urun ? (
-                          <span className="badge bg-emerald-50 text-emerald-700">Kayıtlı ürün</span>
-                        ) : (
-                          <span className="badge bg-amber-50 text-amber-700">Yeni ürün</span>
-                        )}
+                        {l.urun ? <span className="badge bg-emerald-50 text-emerald-700">Var</span> : <span className="text-xs text-slate-400">Yok</span>}
                       </td>
                     </tr>
                   ))}
@@ -365,11 +348,10 @@ export function SiparisForm({
           {pasteError && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{pasteError}</p>}
 
           <div className="flex items-center gap-3">
-            <button type="button" disabled={pasteBusy || onizleme.list.length === 0} onClick={yapistirmayiEkle} className="btn-primary">
-              {pasteBusy ? "Ekleniyor…" : `${onizleme.list.length || ""} satırı siparişe ekle`.trim()}
+            <button type="button" disabled={onizleme.list.length === 0} onClick={yapistirmayiEkle} className="btn-primary">
+              {`${onizleme.list.length || ""} satırı siparişe ekle`.trim()}
             </button>
             <button type="button" onClick={() => setPasteOpen(false)} className="btn-secondary">Vazgeç</button>
-            {onizleme.yeniSayi > 0 && <span className="text-xs text-slate-500">{onizleme.yeniSayi} yeni ürün oluşturulacak</span>}
           </div>
         </div>
       </Modal>

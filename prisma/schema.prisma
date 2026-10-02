@@ -125,8 +125,7 @@ model Urun {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  kalemler SiparisKalem[]
-
+  // Siparişlere bağlı değildir: sipariş formunda öneri listesi ve varsayılan fiyat/KDV kaynağıdır.
   @@index([ad])
 }
 
@@ -163,15 +162,13 @@ model SiparisKalem {
   id         String  @id @default(cuid())
   siparisId  String
   siparis    Siparis @relation(fields: [siparisId], references: [id], onDelete: Cascade)
-  urunId     String
-  urun       Urun    @relation(fields: [urunId], references: [id], onDelete: Restrict)
+  urunAdi    String // ürün kartına bağlı değil: siparişe yazıldığı haliyle saklanır
   adet       Decimal @db.Decimal(14, 3)
   birimFiyat Decimal @db.Decimal(14, 2)
   kdvOrani   Int
   aciklama   String?
 
   @@index([siparisId])
-  @@index([urunId])
 }
 
 // Tahsilat (müşteri) ve ödeme (tedarikçi).

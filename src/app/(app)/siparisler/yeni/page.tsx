@@ -5,9 +5,7 @@ import { requireUser } from "@/lib/session";
 import { todayInput } from "@/lib/format";
 import { SiparisForm } from "../siparis-form";
 import { loadSiparisFormData } from "../form-data";
-import { saveSiparisAction, saveUrunAction } from "../actions";
-import { RecordDialog } from "@/components/record-dialog";
-import { urunFields, urunVarsayilan } from "../../urunler/fields";
+import { saveSiparisAction } from "../actions";
 
 export default async function YeniSiparisPage({ searchParams }: { searchParams: Promise<{ tip?: string; cari?: string; kopya?: string }> }) {
   await requireUser("siparisler:write");
@@ -25,7 +23,7 @@ export default async function YeniSiparisPage({ searchParams }: { searchParams: 
     : null;
   const kopya = kaynak && kaynak.cari.tipi === "MUSTERI" ? kaynak : null;
 
-  const { cariler, urunler } = await loadSiparisFormData(tip, { cariId: cari?.id ?? kopya?.cariId, urunIds: kopya?.kalemler.map((k) => k.urunId) });
+  const { cariler, urunler } = await loadSiparisFormData(tip, { cariId: cari?.id ?? kopya?.cariId });
 
   return (
     <div className="space-y-5">
@@ -35,8 +33,6 @@ export default async function YeniSiparisPage({ searchParams }: { searchParams: 
           <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900">Yeni müşteri siparişi</h1>
           {kopya && <p className="mt-0.5 text-sm text-slate-500">#{kopya.no} numaralı siparişten kopyalandı. Tarihi ve fiyatları kontrol edip kaydedin.</p>}
         </div>
-        {/* Listede olmayan ürün için formdan ayrılmadan ürün eklenir; kaydedince listeye gelir. */}
-        <RecordDialog variant="secondary" label="Yeni ürün" title="Yeni ürün" fields={urunFields} initial={urunVarsayilan} action={saveUrunAction} />
       </header>
       <SiparisForm
         tip={tip}
@@ -48,7 +44,7 @@ export default async function YeniSiparisPage({ searchParams }: { searchParams: 
           aciklama: kopya?.aciklama ?? "",
           durum: "BEKLIYOR",
           kalemler: (kopya?.kalemler ?? []).map((k) => ({
-            urunId: k.urunId,
+            urunAdi: k.urunAdi,
             adet: k.adet.toString(),
             birimFiyat: k.birimFiyat.toString(),
             kdvOrani: String(k.kdvOrani),

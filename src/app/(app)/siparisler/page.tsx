@@ -49,7 +49,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
       orderBy: [{ tarih: "desc" }, { no: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { cari: { select: { id: true, unvan: true } }, kalemler: { include: { urun: { select: { ad: true } } } } },
+      include: { cari: { select: { id: true, unvan: true } }, kalemler: true },
     }),
     db.siparis.count({ where }),
     // Durum rozetleri: diğer filtreler uygulanır, durum filtresi hariç.
@@ -104,7 +104,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
           <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={7} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((s) => {
-              const adlar = [...new Set(s.kalemler.map((k) => k.urun.ad))];
+              const adlar = [...new Set(s.kalemler.map((k) => k.urunAdi))];
               return (
                 <tr key={s.id}>
                   <td className="td font-mono text-xs text-slate-500">#{s.no}</td>

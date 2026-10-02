@@ -51,7 +51,7 @@ export async function getEkstre(cariId: string, donem: Donem) {
   const cari = await db.cari.findUnique({
     where: { id: cariId },
     include: {
-      siparisler: { where: { durum: { not: "IPTAL" } }, include: { kalemler: { include: { urun: { select: { ad: true } } }, orderBy: { id: "asc" } } } },
+      siparisler: { where: { durum: { not: "IPTAL" } }, include: { kalemler: { orderBy: { id: "asc" } } } },
       alimlar: true,
       odemeler: true,
     },
@@ -69,7 +69,7 @@ export async function getEkstre(cariId: string, donem: Donem) {
         tarih: s.tarih,
         sira: s.createdAt.getTime() + i,
         tur: "SIPARIS",
-        model: k.urun.ad,
+        model: k.urunAdi,
         detay: [`Sipariş #${s.no}`, k.aciklama].filter(Boolean).join(" · "),
         miktar: k.adet,
         fiyat: k.birimFiyat,

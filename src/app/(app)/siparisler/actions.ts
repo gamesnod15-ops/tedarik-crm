@@ -32,7 +32,7 @@ function refresh(cariId?: string) {
 
 // ── Sipariş / Alım ──
 const kalemSchema = z.object({
-  urunId: reqText("Ürün"),
+  urunAdi: reqText("Ürün", 200),
   adet: quantityField("Adet"),
   birimFiyat: moneyField("Birim fiyat", { allowZero: true }),
   kdvOrani: kdvField,
@@ -71,11 +71,8 @@ export async function saveSiparisAction(_prev: FormState, formData: FormData): P
     if (cari.tipi !== tip) return { error: tip === "MUSTERI" ? "Müşteri siparişi için müşteri seçin." : "Tedarikçi alımı için tedarikçi seçin." };
     if (!id && tip !== "MUSTERI") return { error: "Tedarikçi alımları Alım kaydı olarak girilir." };
 
-    const urunIds = [...new Set(kalemler.data.map((k) => k.urunId))];
-    if ((await db.urun.count({ where: { id: { in: urunIds } } })) !== urunIds.length) return { error: "Seçilen ürünlerden biri bulunamadı." };
-
     const rows = kalemler.data.map((k) => ({
-      urunId: k.urunId,
+      urunAdi: k.urunAdi.replace(/\s+/g, " "),
       adet: k.adet,
       birimFiyat: k.birimFiyat,
       kdvOrani: k.kdvOrani,
@@ -233,73 +230,20 @@ export async function setSiparisDurumAction(_prev: FormState, formData: FormData
 
 // ── Akıllı varsayılanlar ──
 
-/** Bir müşteri için her ürünün en son kullanılan birim fiyatı (iptal edilen siparişler sayılmaz). */
+/** Bir müşteri için her ürünün en son kullanılan birim fiyatı (iptal edilen siparişler sayılmaz). Anahtar: urunAnahtari(ürün adı). */
 export async function sonFiyatlarAction(cariId: string): Promise<Record<string, { fiyat: string; tarih: string }>> {
   await requireUser("siparisler:read");
   if (!cariId) return {};
   const kalemler = await db.siparisKalem.findMany({
     where: { siparis: { cariId, durum: { not: "IPTAL" } } },
     orderBy: [{ siparis: { tarih: "desc" } }, { siparis: { createdAt: "desc" } }],
-    select: { urunId: true, birimFiyat: true, siparis: { select: { tarih: true } } },
+    select: { urunAdi: true, birimFiyat: true, siparis: { select: { tarih: true } } },
     take: 1000,
   });
   const sonuc: Record<string, { fiyat: string; tarih: string }> = {};
   for (const k of kalemler) {
-    if (!(k.urunId in sonuc)) sonuc[k.urunId] = { fiyat: k.birimFiyat.toString(), tarih: formatDate(k.siparis.tarih) };
+    const anahtar = urunAnahtari(k.urunAdi);
+    if (!(anahtar in sonuc)) sonuc[anahtar] = { fiyat: k.birimFiyat.toString(), tarih: formatDate(k.siparis.tarih) };
   }
   return sonuc;
-}
-
-// ── Excel'den yapıştırma: ürünleri eşleştir / oluştur ──
-
-export type HazirUrun = { anahtar: string; id: string; ad: string; birim: string; birimFiyat: string; kdvOrani: number; yeni: boolean };
-
-/**
- * Yapıştırılan satırlardaki ürün adlarını kayıtlı ürünlerle eşleştirir (büyük/küçük harf önemsiz).
- * olustur=true ise eşleşmeyenler, yapıştırılan fiyat ve KDV ile yeni ürün olarak kaydedilir.
- */
-export async function urunleriHazirlaAction(
-  items: { ad: string; fiyat: string; kdv: string }[],
-  olustur: boolean,
-): Promise<{ error?: string; urunler?: HazirUrun[] }> {
-  const actor = await requireUser("siparisler:write");
-  if (!Array.isArray(items) || items.length === 0) return { error: "Eklenecek satır yok." };
-  if (items.length > 300) return { error: "En fazla 300 satır yapıştırılabilir." };
-
-  const benzersiz = new Map<string, { ad: string; fiyat: string; kdv: string }>();
-  for (const it of items) {
-    const anahtar = urunAnahtari(String(it.ad ?? ""));
-    if (anahtar && !benzersiz.has(anahtar)) benzersiz.set(anahtar, { ad: String(it.ad).replace(/\s+/g, " ").trim().slice(0, 200), fiyat: String(it.fiyat ?? ""), kdv: String(it.kdv ?? "") });
-  }
-
-  try {
-    const mevcut = new Map((await db.urun.findMany({ take: 5000 })).map((u) => [urunAnahtari(u.ad), u]));
-    const sonuc: HazirUrun[] = [];
-    const eksik: string[] = [];
-
-    for (const [anahtar, it] of benzersiz) {
-      const var_ = mevcut.get(anahtar);
-      if (var_) {
-        sonuc.push({ anahtar, id: var_.id, ad: var_.ad, birim: var_.birim, birimFiyat: var_.birimFiyat.toString(), kdvOrani: var_.kdvOrani, yeni: false });
-        continue;
-      }
-      if (!olustur) {
-        eksik.push(it.ad);
-        continue;
-      }
-      const kdv = kdvField.safeParse(it.kdv);
-      if (!kdv.success) return { error: `"${it.ad}" yeni ürün olarak eklenecek ama KDV oranı belirtilmemiş. KDV sütununu doldurun ya da varsayılan KDV girin.` };
-      const fiyat = moneyField("Fiyat", { allowZero: true }).safeParse(it.fiyat || "0");
-      if (!fiyat.success) return { error: `"${it.ad}" için fiyat okunamadı.` };
-      const u = await db.urun.create({ data: { ad: it.ad, birim: "Adet", birimFiyat: fiyat.data, kdvOrani: kdv.data } });
-      await audit({ userId: actor.id, action: "urun.create", entity: "Urun", entityId: u.id, meta: { ad: u.ad, kaynak: "excel" } });
-      sonuc.push({ anahtar, id: u.id, ad: u.ad, birim: u.birim, birimFiyat: u.birimFiyat.toString(), kdvOrani: u.kdvOrani, yeni: true });
-    }
-
-    if (eksik.length) return { error: `Kayıtlı olmayan ürün: ${eksik.slice(0, 5).join(", ")}${eksik.length > 5 ? ` ve ${eksik.length - 5} tane daha` : ""}.` };
-    refresh();
-    return { urunler: sonuc };
-  } catch (err) {
-    return { error: dbErrorMessage(err) };
-  }
 }

@@ -20,7 +20,6 @@ export default async function SiparisDuzenlePage({ params }: { params: Promise<{
   const tip = siparis.cari.tipi;
   const { cariler, urunler } = await loadSiparisFormData(tip, {
     cariId: siparis.cariId,
-    urunIds: siparis.kalemler.map((k) => k.urunId),
   });
 
   return (
@@ -42,7 +41,7 @@ export default async function SiparisDuzenlePage({ params }: { params: Promise<{
           aciklama: siparis.aciklama ?? "",
           durum: siparis.durum,
           kalemler: siparis.kalemler.map((k) => ({
-            urunId: k.urunId,
+            urunAdi: k.urunAdi,
             adet: k.adet.toString(),
             birimFiyat: k.birimFiyat.toString(),
             kdvOrani: String(k.kdvOrani),

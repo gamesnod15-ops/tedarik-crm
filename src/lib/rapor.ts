@@ -14,7 +14,7 @@ export async function getRapor(from: Date, to: Date) {
       where: { tarih: aralik, durum: { not: "IPTAL" } },
       orderBy: [{ tarih: "asc" }, { no: "asc" }],
       take: RAPOR_LIMIT,
-      include: { cari: { select: { unvan: true, tipi: true } }, kalemler: { include: { urun: { select: { ad: true } } } } },
+      include: { cari: { select: { unvan: true, tipi: true } }, kalemler: true },
     }),
     db.masraf.findMany({ where: { tarih: aralik }, orderBy: [{ tarih: "asc" }, { createdAt: "asc" }], take: RAPOR_LIMIT }),
     db.odeme.findMany({
@@ -41,7 +41,7 @@ export async function getRapor(from: Date, to: Date) {
         tarih: s.tarih,
         tur: musteri ? "Müşteri Siparişi" : "Tedarikçi Alımı",
         ad: s.cari.unvan,
-        aciklama: [...new Set(s.kalemler.map((k) => k.urun.ad))].join(", "),
+        aciklama: [...new Set(s.kalemler.map((k) => k.urunAdi))].join(", "),
         tutar: musteri ? toplam : toplam.neg(),
       };
     }),
