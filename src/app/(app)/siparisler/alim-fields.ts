@@ -21,7 +21,7 @@ export function alimFields(cariOptions: Option[]): Field[] {
     { name: "yeniUnvan", label: "Yeni tedarikçi unvanı", required: true, half: true, placeholder: "Firma / kişi adı", showIf: yeni },
     { name: "yeniTelefon", label: "Telefon", type: "tel", half: true, placeholder: "0532 123 45 67", showIf: yeni },
     { name: "miktar", label: "Miktar", type: "number", step: "0.001", half: true, placeholder: "İsteğe bağlı" },
-    { name: "toplam", label: "Toplam (KDV dahil, TL)", type: "number", required: true, half: true, placeholder: "0,00" },
+    { name: "toplam", label: "Toplam Tutar", type: "number", required: true, half: true, placeholder: "0,00" },
     { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "Ör. kumaş, iplik, etiket" },
   ];
 }

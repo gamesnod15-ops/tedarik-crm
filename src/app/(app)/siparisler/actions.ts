@@ -170,7 +170,7 @@ const alimSchema = z.object({
   faturaNo: optText(50),
   aciklama: optText(300),
   miktar: optQuantity("Miktar"),
-  toplam: moneyField("Toplam"),
+  toplam: moneyField("Toplam tutar"),
 });
 
 export async function saveAlimAction(_prev: FormState, formData: FormData): Promise<FormState> {
