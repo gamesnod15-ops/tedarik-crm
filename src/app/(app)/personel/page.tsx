@@ -4,7 +4,7 @@ import { AutoForm } from "@/components/auto-form";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
-import { formatDate, parseDateInput, toDateInput } from "@/lib/format";
+import { formatDate, formatMoney, parseDateInput, toDateInput } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { QueryTabs } from "@/components/query-tabs";
@@ -20,8 +20,11 @@ type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: s
 const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
 const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
 
-// Personel kartı yalnızca ad soyaddan oluşur.
-const personelFields: Field[] = [{ name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" }];
+// Personel kartı: ad soyad ve (isteğe bağlı) maaş. Maaş yalnızca bilgi amaçlıdır, hiçbir hesaplamaya katılmaz.
+const personelFields: Field[] = [
+  { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
+  { name: "maas", label: "Maaş (TL)", type: "number", placeholder: "0,00", hint: "İsteğe bağlı. Yalnızca listede bilgi olarak görünür, hesaplamalara katılmaz." },
+];
 
 function hareketFields(personelOptions: { value: string; label: string }[]): Field[] {
   return [
@@ -74,14 +77,16 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
+              <th className="th text-right">Maaş</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={2} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={3} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
                 <td className="td font-medium text-slate-900">{p.adSoyad}</td>
+                <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
                 <td className="td">
                   {canWrite && (
                     <div className="flex items-center justify-end gap-4">
@@ -91,7 +96,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                         title="Personel düzenle"
                         fields={personelFields}
                         hidden={{ id: p.id }}
-                        initial={{ adSoyad: p.adSoyad }}
+                        initial={{ adSoyad: p.adSoyad, maas: p.maas?.toString() ?? "" }}
                         action={savePersonelAction}
                       />
                       <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir.`} />

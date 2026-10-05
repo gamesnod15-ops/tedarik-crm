@@ -1,4 +1,4 @@
-# Ovox CRM
+# Tuşba Nakış
 
 Next.js 15 + PostgreSQL + Prisma + Auth.js. Genel taslak: [docs/TASLAK.md](docs/TASLAK.md)
 

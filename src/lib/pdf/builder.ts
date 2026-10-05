@@ -46,8 +46,8 @@ export async function createPdf(options: { footerLeft: string }) {
   doc.registerFontkit(fontkit);
   const regular = await doc.embedFont(bytes(ROBOTO_REGULAR_B64), { subset: true });
   const bold = await doc.embedFont(bytes(ROBOTO_BOLD_B64), { subset: true });
-  doc.setProducer("Ovox CRM");
-  doc.setCreator("Ovox CRM");
+  doc.setProducer("Tuşba Nakış");
+  doc.setCreator("Tuşba Nakış");
 
   const contentW = PAGE_W - 2 * MARGIN;
   let page!: PDFPage;
@@ -76,7 +76,7 @@ export async function createPdf(options: { footerLeft: string }) {
     newPage();
 
     // Başlık
-    drawText("Ovox CRM", MARGIN, y - 8, 8, bold, BRAND);
+    drawText("Tuşba Nakış", MARGIN, y - 8, 8, bold, BRAND);
     y -= 22;
     drawText(fit(section.title, contentW, 15, bold), MARGIN, y - 12, 15, bold);
     y -= 22;

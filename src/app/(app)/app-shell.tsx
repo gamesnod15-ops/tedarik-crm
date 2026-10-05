@@ -107,19 +107,10 @@ export function AppShell({
         }`}
       >
         <div className="flex h-14 shrink-0 items-center border-b border-slate-300 px-4">
-          <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Ovox CRM">
+          <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Tuşba Nakış">
+            {/* Logonun kendi zemini olduğu için açık ve koyu temada aynı dosya kullanılır. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {collapsed ? (
-              <>
-                <img src="/ovox-crm-collapsed.svg" alt="Ovox CRM" className="h-7 w-auto dark:hidden" />
-                <img src="/ovox-crm-collapsed-dark.svg" alt="Ovox CRM" className="hidden h-7 w-auto dark:block" />
-              </>
-            ) : (
-              <>
-                <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto dark:hidden" />
-                <img src="/ovox-crm-logo-dark.svg" alt="Ovox CRM" className="hidden h-4 w-auto dark:block" />
-              </>
-            )}
+            <img src="/tusba-logo.svg" alt="Tuşba Nakış" className={collapsed ? "h-10 w-auto" : "h-11 w-auto"} />
           </Link>
         </div>
           <nav aria-label="Ana menü" className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -199,11 +190,9 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
       <div className="sticky top-0 z-20 print:hidden">
       <header className="flex h-14 items-center gap-2 border-b border-slate-300 bg-white px-3 sm:gap-3 sm:px-4">
-        <Link href="/" className="shrink-0 md:hidden" aria-label="Ovox CRM">
+        <Link href="/" className="shrink-0 md:hidden" aria-label="Tuşba Nakış">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ovox-crm-logo.svg" alt="Ovox CRM" className="h-4 w-auto dark:hidden" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/ovox-crm-logo-dark.svg" alt="Ovox CRM" className="hidden h-4 w-auto dark:block" />
+          <img src="/tusba-logo.svg" alt="Tuşba Nakış" className="h-11 w-auto" />
         </Link>
         <button
           type="button"

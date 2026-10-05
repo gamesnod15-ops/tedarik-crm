@@ -7,7 +7,7 @@ import { createPdf, type PdfRow } from "./builder";
 type Ekstre = NonNullable<Awaited<ReturnType<typeof getEkstre>>>;
 type Pdf = Awaited<ReturnType<typeof createPdf>>;
 
-const footer = () => `Ovox CRM · Oluşturma: ${formatDateTime(new Date())}`;
+const footer = () => `Tuşba Nakış · Oluşturma: ${formatDateTime(new Date())}`;
 
 /** Tek bir carinin hesap ekstresini PDF'e bir bölüm (en az bir sayfa) olarak ekler. */
 export function addEkstreSection(pdf: Pdf, e: Ekstre) {

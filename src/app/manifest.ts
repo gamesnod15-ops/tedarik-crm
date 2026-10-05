@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Ovox CRM",
-    short_name: "Ovox CRM",
+    name: "Tuşba Nakış",
+    short_name: "Tuşba Nakış",
     description: "Cari, sipariş, finans ve personel takibi",
     lang: "tr",
     start_url: "/",

@@ -3,11 +3,11 @@ import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ovox CRM",
+  title: "Tuşba Nakış",
   description: "Tedarik süreçleri yönetim uygulaması",
-  applicationName: "Ovox CRM",
+  applicationName: "Tuşba Nakış",
   // iPhone'da "Ana Ekrana Ekle" ile tam ekran uygulama gibi açılır.
-  appleWebApp: { capable: true, title: "Ovox CRM", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Tuşba Nakış", statusBarStyle: "default" },
   icons: {
     icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],

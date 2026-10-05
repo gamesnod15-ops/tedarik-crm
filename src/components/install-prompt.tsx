@@ -68,7 +68,7 @@ export function InstallPrompt() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icons/icon-192.png" alt="" className="h-11 w-11 shrink-0 rounded-xl border border-slate-200" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">Ovox CRM'i telefona yükleyin</p>
+          <p className="text-sm font-semibold text-slate-900">Tuşba Nakış'ı telefona yükleyin</p>
           {ios ? (
             <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
               {/* iOS 26 Safari'nin sade görünümünde Paylaş düğmesi alt çubukta değil, adresin yanındaki menünün içinde. */}
