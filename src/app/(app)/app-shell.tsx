@@ -110,7 +110,13 @@ export function AppShell({
           <Link href="/" className={`flex w-full items-center ${collapsed ? "justify-center" : ""}`} aria-label="Tuşba Nakış">
             {/* Logonun kendi zemini olduğu için açık ve koyu temada aynı dosya kullanılır. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/tusba-logo.svg" alt="Tuşba Nakış" className={collapsed ? "h-10 w-auto" : "h-11 w-auto"} />
+            <img src="/tusba-logo.svg" alt={collapsed ? "Tuşba Nakış" : ""} className={collapsed ? "h-10 w-auto" : "h-11 w-auto shrink-0"} />
+            {!collapsed && (
+              <span className="ml-3 min-w-0 leading-tight">
+                <span className="block truncate text-[15px] font-semibold text-slate-900">Tuşba Nakış</span>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-600">CRM</span>
+              </span>
+            )}
           </Link>
         </div>
           <nav aria-label="Ana menü" className="flex-1 space-y-1 overflow-y-auto p-3">
