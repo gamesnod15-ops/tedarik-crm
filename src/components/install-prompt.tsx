@@ -71,12 +71,13 @@ export function InstallPrompt() {
           <p className="text-sm font-semibold text-slate-900">Ovox CRM'i telefona yükleyin</p>
           {ios ? (
             <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-              Alttaki <strong>Paylaş</strong>{" "}
+              {/* iOS 26 Safari'nin sade görünümünde Paylaş düğmesi alt çubukta değil, adresin yanındaki menünün içinde. */}
+              <strong>Paylaş</strong>{" "}
               <svg viewBox="0 0 24 24" className="inline h-4 w-4 align-text-bottom" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 3v12M8 7l4-4 4 4" />
                 <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
               </svg>{" "}
-              düğmesine, sonra <strong>Ana Ekrana Ekle</strong>'ye dokunun.
+              düğmesine dokunun (görünmüyorsa önce adresin yanındaki <strong>≡</strong> ya da <strong>⋯</strong> menüsünü açın), sonra <strong>Ana Ekrana Ekle</strong>'yi seçin.
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-slate-600">Ana ekrandan tek dokunuşla, uygulama gibi açılır.</p>
