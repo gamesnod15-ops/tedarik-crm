@@ -211,6 +211,7 @@ model Personel {
   telefon        String?
   iseGirisTarihi DateTime?     @db.Date
   maas           Decimal?      @db.Decimal(14, 2) // yalnızca bilgi: hiçbir hesaplamaya katılmaz
+  aciklama       String?
   durum          PersonelDurum @default(AKTIF)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

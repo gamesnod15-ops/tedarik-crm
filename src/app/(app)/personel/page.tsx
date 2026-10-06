@@ -9,6 +9,7 @@ import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { QueryTabs } from "@/components/query-tabs";
 import { RecordDialog } from "@/components/record-dialog";
+import { UzunMetin } from "@/components/uzun-metin";
 import { DeleteButton } from "@/components/delete-button";
 import type { Field } from "@/components/entity-form";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
@@ -24,6 +25,7 @@ const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const
 const personelFields: Field[] = [
   { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
   { name: "maas", label: "Maaş (TL)", type: "number", placeholder: "0,00", hint: "İsteğe bağlı. Yalnızca listede bilgi olarak görünür, hesaplamalara katılmaz." },
+  { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
 ];
 
 function hareketFields(personelOptions: { value: string; label: string }[]): Field[] {
@@ -78,15 +80,19 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
             <tr>
               <th className="th">Ad soyad</th>
               <th className="th text-right">Maaş</th>
+              <th className="th">Açıklama</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={3} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={4} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
                 <td className="td font-medium text-slate-900">{p.adSoyad}</td>
                 <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
+                <td className="td max-w-sm text-slate-600">
+                  <UzunMetin metin={p.aciklama} baslik={`${p.adSoyad} · Açıklama`} />
+                </td>
                 <td className="td">
                   {canWrite && (
                     <div className="flex items-center justify-end gap-4">
@@ -96,7 +102,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                         title="Personel düzenle"
                         fields={personelFields}
                         hidden={{ id: p.id }}
-                        initial={{ adSoyad: p.adSoyad, maas: p.maas?.toString() ?? "" }}
+                        initial={{ adSoyad: p.adSoyad, maas: p.maas?.toString() ?? "", aciklama: p.aciklama ?? "" }}
                         action={savePersonelAction}
                       />
                       <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir.`} />

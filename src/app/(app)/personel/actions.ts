@@ -28,6 +28,7 @@ const personelSchema = z.object({
   adSoyad: reqText("Ad soyad", 150),
   // Maaş personelin kendi bilgisidir: yalnızca personel listesinde görünür, hiçbir hesaplamada kullanılmaz.
   maas: optMoney("Maaş"),
+  aciklama: optText(2000),
 });
 
 export async function savePersonelAction(_prev: FormState, formData: FormData): Promise<FormState> {
