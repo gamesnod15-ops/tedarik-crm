@@ -45,18 +45,20 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
+              <th className="th text-right">Maaş</th>
               <th className="th text-right">Toplam ödeme</th>
               <th className="th">Açıklama</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={4} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
                 <td className="td">
                   <Link href={`/personel/${p.id}`} className="font-medium text-petrol-700 hover:underline">{p.adSoyad}</Link>
                 </td>
+                <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
                 <td className="td text-right tabular-nums">{formatMoney(toplamlar.get(p.id) ?? 0)}</td>
                 <td className="td max-w-sm text-slate-600">
                   <UzunMetin metin={p.aciklama} baslik={`${p.adSoyad} · Açıklama`} />
@@ -70,7 +72,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                         title="Personel düzenle"
                         fields={personelFields}
                         hidden={{ id: p.id }}
-                        initial={{ adSoyad: p.adSoyad, aciklama: p.aciklama ?? "" }}
+                        initial={{ adSoyad: p.adSoyad, maas: p.maas?.toString() ?? "", aciklama: p.aciklama ?? "" }}
                         action={savePersonelAction}
                       />
                       <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri ve ödemeleri de silinir.`} />

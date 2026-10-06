@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
-import { dateField, dbErrorMessage, firstIssue, moneyField, optDate, optText, reqText, type FormState } from "@/lib/crud";
+import { dateField, dbErrorMessage, firstIssue, moneyField, optDate, optMoney, optText, reqText, type FormState } from "@/lib/crud";
 
 const hhmm = (label: string) =>
   z
@@ -27,6 +27,8 @@ function refresh() {
 const personelSchema = z.object({
   id: z.string().optional(),
   adSoyad: reqText("Ad soyad", 150),
+  // Maaş personelin kendi bilgisidir; hiçbir hesaplamada kullanılmaz.
+  maas: optMoney("Maaş"),
   aciklama: optText(2000),
 });
 
@@ -34,7 +36,9 @@ export async function savePersonelAction(_prev: FormState, formData: FormData): 
   const actor = await requireUser("personel:write");
   const parsed = personelSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const { id, ...data } = parsed.data;
+  const { id, ...rest } = parsed.data;
+  // Maaş boş bırakılırsa 0 değil "girilmemiş" (null) kaydedilir.
+  const data = { ...rest, maas: String(formData.get("maas") ?? "").trim() ? rest.maas : null };
 
   try {
     if (id) {

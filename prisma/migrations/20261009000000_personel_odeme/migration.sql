@@ -1,4 +1,5 @@
 -- Personel ödemeleri: bir personele birden fazla ödeme (tutar + açıklama) girilir.
+-- Personel kartındaki maaş alanı ve değerleri olduğu gibi kalır.
 -- Yalnızca bilgi amaçlıdır; finans, bakiye ve rapor hesaplarına katılmaz.
 CREATE TABLE "PersonelOdeme" (
     "id" TEXT NOT NULL,
@@ -14,11 +15,3 @@ CREATE TABLE "PersonelOdeme" (
 CREATE INDEX "PersonelOdeme_personelId_tarih_idx" ON "PersonelOdeme"("personelId", "tarih");
 
 ALTER TABLE "PersonelOdeme" ADD CONSTRAINT "PersonelOdeme_personelId_fkey" FOREIGN KEY ("personelId") REFERENCES "Personel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Personel kartındaki tek maaş alanı ödeme kaydına dönüştürülür (veri kaybolmaz), sonra alan kaldırılır.
-INSERT INTO "PersonelOdeme" ("id", "personelId", "tarih", "tutar", "aciklama", "createdAt")
-SELECT 'mig' || substr(md5(p."id"), 1, 22), p."id", p."updatedAt"::date, p."maas", 'Maaş (önceki kayıttan aktarıldı)', CURRENT_TIMESTAMP
-FROM "Personel" p
-WHERE p."maas" IS NOT NULL AND p."maas" > 0;
-
-ALTER TABLE "Personel" DROP COLUMN "maas";

@@ -4,9 +4,11 @@ import { formatDate } from "@/lib/format";
 export const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
 export const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
 
-// Personel kartı: ad soyad ve açıklama. Ödemeler (maaş vb.) personel detay sayfasında ayrı kayıtlar olarak tutulur.
+// Personel kartı: ad soyad, maaş ve açıklama. Yapılan ödemeler personel detay sayfasında ayrı kayıtlar olarak tutulur.
+// Maaş ve ödemeler yalnızca bilgi amaçlıdır, hiçbir hesaplamaya katılmaz.
 export const personelFields: Field[] = [
   { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
+  { name: "maas", label: "Maaş (TL)", type: "number", placeholder: "0,00", hint: "İsteğe bağlı. Bilgi amaçlıdır, hesaplamalara katılmaz." },
   { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
 ];
 

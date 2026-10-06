@@ -56,7 +56,7 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
                 title="Personel düzenle"
                 fields={personelFields}
                 hidden={{ id: personel.id }}
-                initial={{ adSoyad: personel.adSoyad, aciklama: personel.aciklama ?? "" }}
+                initial={{ adSoyad: personel.adSoyad, maas: personel.maas?.toString() ?? "", aciklama: personel.aciklama ?? "" }}
                 action={savePersonelAction}
               />
               <RecordDialog
@@ -79,7 +79,8 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
         </section>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kutu label="Maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt="Personel kartındaki bilgi" />
         <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt="Bilgi amaçlı; hesaplamalara katılmaz" />
         <Kutu label="Ödeme sayısı" value={String(personel.odemeler.length)} />
         <Kutu label="Son ödeme" value={son ? formatMoney(son.tutar) : "—"} alt={son ? formatDate(son.tarih) : undefined} />
