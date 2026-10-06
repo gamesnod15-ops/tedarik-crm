@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
-import { dateField, dbErrorMessage, firstIssue, optDate, optMoney, optPhone, optText, reqText, type FormState } from "@/lib/crud";
+import { dateField, dbErrorMessage, firstIssue, moneyField, optDate, optText, reqText, type FormState } from "@/lib/crud";
 
 const hhmm = (label: string) =>
   z
@@ -19,15 +19,14 @@ const hhmm = (label: string) =>
     });
 
 function refresh() {
-  revalidatePath("/personel");
+  // Liste ve tüm personel detay sayfaları
+  revalidatePath("/personel", "layout");
 }
 
 // ── Personel ──
 const personelSchema = z.object({
   id: z.string().optional(),
   adSoyad: reqText("Ad soyad", 150),
-  // Maaş personelin kendi bilgisidir: yalnızca personel listesinde görünür, hiçbir hesaplamada kullanılmaz.
-  maas: optMoney("Maaş"),
   aciklama: optText(2000),
 });
 
@@ -35,9 +34,7 @@ export async function savePersonelAction(_prev: FormState, formData: FormData): 
   const actor = await requireUser("personel:write");
   const parsed = personelSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: firstIssue(parsed.error) };
-  const { id, ...rest } = parsed.data;
-  // Maaş boş bırakılırsa 0 değil "girilmemiş" (null) kaydedilir.
-  const data = { ...rest, maas: String(formData.get("maas") ?? "").trim() ? rest.maas : null };
+  const { id, ...data } = parsed.data;
 
   try {
     if (id) {
@@ -59,9 +56,53 @@ export async function deletePersonelAction(_prev: FormState, formData: FormData)
   const actor = await requireUser("personel:write");
   const id = String(formData.get("id") ?? "");
   try {
-    // Hareket kayıtları da (cascade) silinir.
+    // Hareket ve ödeme kayıtları da (cascade) silinir.
     const p = await db.personel.delete({ where: { id } });
     await audit({ userId: actor.id, action: "personel.delete", entity: "Personel", entityId: id, meta: { adSoyad: p.adSoyad } });
+  } catch (err) {
+    return { error: dbErrorMessage(err) };
+  }
+  refresh();
+  return { ok: "Silindi." };
+}
+
+// ── Personel ödemesi (maaş vb.) ──
+// Yalnızca bilgi: finans, bakiye ve rapor hesaplarına katılmaz.
+const odemeSchema = z.object({
+  id: z.string().optional(),
+  personelId: reqText("Personel"),
+  tarih: dateField("Tarih"),
+  tutar: moneyField("Tutar"),
+  aciklama: optText(500),
+});
+
+export async function savePersonelOdemeAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requireUser("personel:write");
+  const parsed = odemeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+  const { id, ...data } = parsed.data;
+  try {
+    if (!(await db.personel.findUnique({ where: { id: data.personelId }, select: { id: true } }))) return { error: "Personel bulunamadı." };
+    if (id) {
+      await db.personelOdeme.update({ where: { id }, data });
+      await audit({ userId: actor.id, action: "personelOdeme.update", entity: "PersonelOdeme", entityId: id, meta: { tutar: data.tutar.toString() } });
+    } else {
+      const o = await db.personelOdeme.create({ data });
+      await audit({ userId: actor.id, action: "personelOdeme.create", entity: "PersonelOdeme", entityId: o.id, meta: { tutar: data.tutar.toString() } });
+    }
+  } catch (err) {
+    return { error: dbErrorMessage(err) };
+  }
+  refresh();
+  return { ok: "Kaydedildi." };
+}
+
+export async function deletePersonelOdemeAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const actor = await requireUser("personel:write");
+  const id = String(formData.get("id") ?? "");
+  try {
+    const o = await db.personelOdeme.delete({ where: { id } });
+    await audit({ userId: actor.id, action: "personelOdeme.delete", entity: "PersonelOdeme", entityId: id, meta: { tutar: o.tutar.toString() } });
   } catch (err) {
     return { error: dbErrorMessage(err) };
   }

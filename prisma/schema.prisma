@@ -210,18 +210,31 @@ model Personel {
   departman      String?
   telefon        String?
   iseGirisTarihi DateTime?     @db.Date
-  maas           Decimal?      @db.Decimal(14, 2) // yalnızca bilgi: hiçbir hesaplamaya katılmaz
   aciklama       String?
   durum          PersonelDurum @default(AKTIF)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   hareketler PersonelHareket[]
+  odemeler   PersonelOdeme[]
 
   @@index([durum])
 }
 
 // Giriş-çıkış saatleri ve izinler. Saatler "HH:mm" metni olarak tutulur.
+/// Personele yapılan ödemeler (maaş vb.). Yalnızca bilgi: finans, bakiye ve rapor hesaplarına katılmaz.
+model PersonelOdeme {
+  id         String   @id @default(cuid())
+  personelId String
+  personel   Personel @relation(fields: [personelId], references: [id], onDelete: Cascade)
+  tarih      DateTime @db.Date
+  tutar      Decimal  @db.Decimal(14, 2)
+  aciklama   String?
+  createdAt  DateTime @default(now())
+
+  @@index([personelId, tarih])
+}
+
 model PersonelHareket {
   id            String      @id @default(cuid())
   personelId    String

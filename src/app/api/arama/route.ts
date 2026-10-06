@@ -45,9 +45,9 @@ export async function GET(req: Request) {
       where: { adSoyad: icerir },
       orderBy: { adSoyad: "asc" },
       take: LIMIT,
-      select: { adSoyad: true },
+      select: { id: true, adSoyad: true },
     });
-    for (const p of personel) sonuclar.push({ grup: "Personel", baslik: p.adSoyad, href: `/personel?q=${encodeURIComponent(p.adSoyad)}` });
+    for (const p of personel) sonuclar.push({ grup: "Personel", baslik: p.adSoyad, href: `/personel/${p.id}` });
   }
   return NextResponse.json({ sonuclar });
 }

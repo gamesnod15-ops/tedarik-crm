@@ -11,50 +11,12 @@ import { QueryTabs } from "@/components/query-tabs";
 import { RecordDialog } from "@/components/record-dialog";
 import { UzunMetin } from "@/components/uzun-metin";
 import { DeleteButton } from "@/components/delete-button";
-import type { Field } from "@/components/entity-form";
+import { TUR_LABELS, hareketAyrinti, hareketFields, personelFields } from "./fields";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
 
 type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; page?: string };
-
-const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
-const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
-
-// Personel kartı: ad soyad ve (isteğe bağlı) maaş. Maaş yalnızca bilgi amaçlıdır, hiçbir hesaplamaya katılmaz.
-const personelFields: Field[] = [
-  { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
-  { name: "maas", label: "Maaş (TL)", type: "number", placeholder: "0,00", hint: "İsteğe bağlı. Yalnızca listede bilgi olarak görünür, hesaplamalara katılmaz." },
-  { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
-];
-
-function hareketFields(personelOptions: { value: string; label: string }[]): Field[] {
-  return [
-    { name: "personelId", label: "Personel", type: "select", required: true, options: personelOptions, placeholder: "Personel seçin…" },
-    {
-      name: "islemTuru",
-      label: "İşlem türü",
-      type: "select",
-      required: true,
-      half: true,
-      options: Object.entries(TUR_LABELS).map(([value, label]) => ({ value, label })),
-    },
-    { name: "tarih", label: "Tarih", type: "date", required: true, half: true },
-    { name: "girisSaati", label: "Giriş saati", type: "time", half: true, required: true, showIf: { field: "islemTuru", in: ["GIRIS_CIKIS"] } },
-    { name: "cikisSaati", label: "Çıkış saati", type: "time", half: true, showIf: { field: "islemTuru", in: ["GIRIS_CIKIS"] } },
-    {
-      name: "izinTuru",
-      label: "İzin türü",
-      type: "select",
-      required: true,
-      options: Object.entries(IZIN_LABELS).map(([value, label]) => ({ value, label })),
-      showIf: { field: "islemTuru", in: ["IZIN"] },
-    },
-    { name: "izinBaslangic", label: "İzin başlangıç tarihi", type: "date", half: true, required: true, showIf: { field: "islemTuru", in: ["IZIN"] } },
-    { name: "izinBitis", label: "İzin bitiş tarihi", type: "date", half: true, required: true, showIf: { field: "islemTuru", in: ["IZIN"] } },
-    { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
-  ];
-}
 
 async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
   const where: Prisma.PersonelWhereInput = {
@@ -64,6 +26,10 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
     db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     db.personel.count({ where }),
   ]);
+  // Her personelin ödemelerinin toplamı (yalnızca bilgi; hiçbir hesaplamaya katılmaz).
+  const toplamlar = new Map(
+    (await db.personelOdeme.groupBy({ by: ["personelId"], where: { personelId: { in: rows.map((r) => r.id) } }, _sum: { tutar: true } })).map((t) => [t.personelId, t._sum.tutar]),
+  );
 
   return (
     <>
@@ -79,7 +45,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
-              <th className="th text-right">Maaş</th>
+              <th className="th text-right">Toplam ödeme</th>
               <th className="th">Açıklama</th>
               <th className="th" />
             </tr>
@@ -88,8 +54,10 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
             {rows.length === 0 && <tr><td colSpan={4} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => (
               <tr key={p.id}>
-                <td className="td font-medium text-slate-900">{p.adSoyad}</td>
-                <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
+                <td className="td">
+                  <Link href={`/personel/${p.id}`} className="font-medium text-petrol-700 hover:underline">{p.adSoyad}</Link>
+                </td>
+                <td className="td text-right tabular-nums">{formatMoney(toplamlar.get(p.id) ?? 0)}</td>
                 <td className="td max-w-sm text-slate-600">
                   <UzunMetin metin={p.aciklama} baslik={`${p.adSoyad} · Açıklama`} />
                 </td>
@@ -102,10 +70,10 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                         title="Personel düzenle"
                         fields={personelFields}
                         hidden={{ id: p.id }}
-                        initial={{ adSoyad: p.adSoyad, maas: p.maas?.toString() ?? "", aciklama: p.aciklama ?? "" }}
+                        initial={{ adSoyad: p.adSoyad, aciklama: p.aciklama ?? "" }}
                         action={savePersonelAction}
                       />
-                      <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri de silinir.`} />
+                      <DeleteButton action={deletePersonelAction} id={p.id} confirmText={`"${p.adSoyad}" silinsin mi? Tüm iş hareketleri ve ödemeleri de silinir.`} />
                     </div>
                   )}
                 </td>
@@ -200,9 +168,7 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
                   <span className={`badge ${h.islemTuru === "IZIN" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-700"}`}>{TUR_LABELS[h.islemTuru]}</span>
                 </td>
                 <td className="td">
-                  {h.islemTuru === "GIRIS_CIKIS"
-                    ? `${h.girisSaati ?? "—"} → ${h.cikisSaati ?? "—"}`
-                    : `${h.izinTuru ? IZIN_LABELS[h.izinTuru] : "İzin"}: ${formatDate(h.izinBaslangic)} – ${formatDate(h.izinBitis)}`}
+                  {hareketAyrinti(h)}
                 </td>
                 <td className="td max-w-xs truncate text-slate-500" title={h.aciklama ?? ""}>{h.aciklama ?? "—"}</td>
                 <td className="td">
