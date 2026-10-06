@@ -8,16 +8,16 @@ import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { UzunMetin } from "@/components/uzun-metin";
 import { MobileTables } from "@/components/mobile-tables";
-import { TUR_LABELS, hareketAyrinti, odemeFields, personelFields } from "../fields";
+import { TUR_LABELS, hareketAyrinti, kalanMiktar, odemeFields, personelFields } from "../fields";
 import { deletePersonelOdemeAction, savePersonelAction, savePersonelOdemeAction } from "../actions";
 
 const SON_HAREKET = 10;
 
-function Kutu({ label, value, alt }: { label: string; value: string; alt?: string }) {
+function Kutu({ label, value, alt, tone = "text-slate-900", vurgu = false }: { label: string; value: string; alt?: string; tone?: string; vurgu?: boolean }) {
   return (
-    <div className="card p-4">
+    <div className={`card p-4 ${vurgu ? "ring-2 ring-brand-200" : ""}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{value}</p>
+      <p className={`mt-1 text-lg font-semibold tabular-nums ${tone}`}>{value}</p>
       {alt && <p className="mt-0.5 text-xs text-slate-500">{alt}</p>}
     </div>
   );
@@ -41,6 +41,7 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
   // Ödemeler yalnızca bilgi amaçlıdır: bu toplam hiçbir finans/bakiye/rapor hesabına katılmaz.
   const toplam = personel.odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
   const son = personel.odemeler[0];
+  const kalan = kalanMiktar(personel.maas, toplam);
 
   return (
     <div className="space-y-5">
@@ -80,9 +81,15 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
       )}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kutu label="Maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt="Personel kartındaki bilgi" />
-        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt="Bilgi amaçlı; hesaplamalara katılmaz" />
-        <Kutu label="Ödeme sayısı" value={String(personel.odemeler.length)} />
+        <Kutu label="Sabit maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt={personel.maas ? undefined : "Düzenle'den girilebilir"} />
+        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${personel.odemeler.length} ödeme`} />
+        <Kutu
+          label="Kalan miktar"
+          value={kalan ? formatMoney(kalan.abs()) : "—"}
+          alt={kalan === null ? "Sabit maaş girilmemiş" : kalan.isNegative() ? "Maaştan fazla ödendi" : kalan.isZero() ? "Tamamı ödendi" : "Sabit maaş − toplam ödeme"}
+          tone={kalan?.isNegative() ? "text-red-700" : "text-slate-900"}
+          vurgu
+        />
         <Kutu label="Son ödeme" value={son ? formatMoney(son.tutar) : "—"} alt={son ? formatDate(son.tarih) : undefined} />
       </section>
 
@@ -135,9 +142,19 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
         </table>
         <MobileTables />
         {personel.odemeler.length > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-300 bg-slate-50 px-5 py-3 text-sm">
-            <span className="font-semibold text-slate-700">Toplam</span>
-            <span className="font-semibold tabular-nums text-slate-900">{formatMoney(toplam)}</span>
+          <div className="space-y-1 border-t border-slate-300 bg-slate-50 px-5 py-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700">Toplam</span>
+              <span className="font-semibold tabular-nums text-slate-900">{formatMoney(toplam)}</span>
+            </div>
+            {kalan !== null && (
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Kalan miktar (sabit maaş {formatMoney(personel.maas!)})</span>
+                <span className={`font-semibold tabular-nums ${kalan.isNegative() ? "text-red-700" : "text-slate-900"}`}>
+                  {kalan.isNegative() ? `${formatMoney(kalan.abs())} fazla ödeme` : formatMoney(kalan)}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </section>

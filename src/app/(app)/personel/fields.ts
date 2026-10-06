@@ -1,14 +1,15 @@
 import type { Field } from "@/components/entity-form";
+import { Prisma } from "@prisma/client";
 import { formatDate } from "@/lib/format";
 
 export const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETSIZ: "Ücretsiz izin", MAZERET: "Mazeret izni", DIGER: "Diğer" } as const;
 export const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
 
 // Personel kartı: ad soyad, maaş ve açıklama. Yapılan ödemeler personel detay sayfasında ayrı kayıtlar olarak tutulur.
-// Maaş ve ödemeler yalnızca bilgi amaçlıdır, hiçbir hesaplamaya katılmaz.
+// Kalan miktar = sabit maaş − girilen ödemelerin toplamı. Maaş ve ödemeler finans, bakiye ve rapor hesaplarına katılmaz.
 export const personelFields: Field[] = [
   { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
-  { name: "maas", label: "Maaş (TL)", type: "number", placeholder: "0,00", hint: "İsteğe bağlı. Bilgi amaçlıdır, hesaplamalara katılmaz." },
+  { name: "maas", label: "Sabit maaş (TL)", type: "number", placeholder: "0,00", hint: "Girilen ödemeler bu tutardan düşülür, kalan miktar gösterilir. Finans ve raporlara katılmaz." },
   { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
 ];
 
@@ -59,4 +60,10 @@ export function hareketAyrinti(h: {
   return h.islemTuru === "GIRIS_CIKIS"
     ? `${h.girisSaati ?? "—"} → ${h.cikisSaati ?? "—"}`
     : `${h.izinTuru ? IZIN_LABELS[h.izinTuru] : "İzin"}: ${formatDate(h.izinBaslangic)} – ${formatDate(h.izinBitis)}`;
+}
+
+/** Kalan miktar = sabit maaş − toplam ödeme. Maaş girilmemişse null. Negatifse maaştan fazla ödenmiştir. */
+export function kalanMiktar(maas: Prisma.Decimal | null, toplamOdeme: Prisma.Decimal | null | undefined) {
+  if (maas === null) return null;
+  return maas.sub(toplamOdeme ?? 0);
 }

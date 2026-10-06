@@ -11,7 +11,7 @@ import { QueryTabs } from "@/components/query-tabs";
 import { RecordDialog } from "@/components/record-dialog";
 import { UzunMetin } from "@/components/uzun-metin";
 import { DeleteButton } from "@/components/delete-button";
-import { TUR_LABELS, hareketAyrinti, hareketFields, personelFields } from "./fields";
+import { TUR_LABELS, hareketAyrinti, hareketFields, kalanMiktar, personelFields } from "./fields";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
@@ -45,21 +45,27 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
               <th className="th">Ad soyad</th>
-              <th className="th text-right">Maaş</th>
+              <th className="th text-right">Sabit maaş</th>
               <th className="th text-right">Toplam ödeme</th>
+              <th className="th text-right">Kalan</th>
               <th className="th">Açıklama</th>
               <th className="th" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {rows.length === 0 && <tr><td colSpan={5} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
-            {rows.map((p) => (
+            {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
+            {rows.map((p) => {
+              const kalan = kalanMiktar(p.maas, toplamlar.get(p.id));
+              return (
               <tr key={p.id}>
                 <td className="td">
                   <Link href={`/personel/${p.id}`} className="font-medium text-petrol-700 hover:underline">{p.adSoyad}</Link>
                 </td>
                 <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
                 <td className="td text-right tabular-nums">{formatMoney(toplamlar.get(p.id) ?? 0)}</td>
+                <td className={`td text-right font-semibold tabular-nums ${kalan?.isNegative() ? "text-red-700" : "text-slate-900"}`}>
+                  {kalan ? formatMoney(kalan) : "—"}
+                </td>
                 <td className="td max-w-sm text-slate-600">
                   <UzunMetin metin={p.aciklama} baslik={`${p.adSoyad} · Açıklama`} />
                 </td>
@@ -80,7 +86,8 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         <MobileTables />
