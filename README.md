@@ -28,18 +28,17 @@ Canlı adres: https://tusbacrm.tusbanakis.com — cPanel'de **Setup Node.js App*
 
 ### Yeni sürüm yayınlamak
 
-1. Şema değiştiyse migration'ı **kendi bilgisayarınızdan** canlıya uygulayın (cPanel > Remote Database Access'te IP'nizin ekli olması gerekir):
+Değişiklikleri commit edin, sonra:
 
-   ```powershell
-   $env:DATABASE_URL = "mysql://tusbanak_crm:<şifre>@mt-xtar.guzelhosting.com:3306/tusbanak_crm"
-   npm run db:status      # hangi migration'lar uygulanmış/bekliyor
-   npm run db:deploy      # bekleyenleri uygular (veri silmez)
-   Remove-Item Env:DATABASE_URL
-   ```
+```powershell
+npm run deploy                 # tip kontrolü, derleme, migration, yükleme, yeniden başlatma, kontrol
+npm run deploy -- --geri-al    # sorun çıkarsa bir önceki sürüme döner (tekrar çalıştırınca yeniye geçer)
+```
 
-2. Paketi hazırlayın: `npm run build` ardından `npm run paket` → `cpanel-paket.tar.gz`.
-3. cPanel **Dosya Yöneticisi** ile `~/tusbacrm` içine yükleyip **Extract** edin (mevcut `app/` klasörünün üzerine yazar), arşivi silin.
-4. **Setup Node.js App** > uygulama > **RESTART**.
+- Ayarlar ve gizli değerler `.env.cpanel` dosyasındadır (git'e girmez): `CPANEL_API_TOKEN` (cPanel > Manage API Tokens), `DATABASE_URL_REMOTE`, `AUTH_URL`.
+- Migration'lar yeni kod yayına girmeden önce canlı veritabanına uygulanır; geri alma migration'ları geri almaz. Şema değişikliklerini eski kodla uyumlu yapın.
+- Sunucuda `~/tusbacrm/app` canlı sürüm, `~/tusbacrm/app_onceki` bir önceki sürümdür.
+- Elle yayın (API anahtarı yoksa): `npm run build` ve `npm run paket` → `cpanel-paket.tar.gz` dosyasını Dosya Yöneticisi ile `~/tusbacrm` içine yükleyip **Extract** edin, sonra **Setup Node.js App** > **RESTART**.
 
 ### Şema değişikliği yaparken
 
