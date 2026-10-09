@@ -18,8 +18,8 @@ export function dbErrorMessage(err: unknown, fallback = "İşlem tamamlanamadı.
     if (err.code === "P2002") return "Bu değerle kayıtlı başka bir kayıt zaten var.";
     if (err.code === "P2025") return "Kayıt bulunamadı (başka biri silmiş olabilir).";
   }
-  // Postgres RESTRICT ihlali (23001) Prisma'da bilinen bir koda çevrilmiyor; mesajdan tanınır.
-  if (err instanceof Prisma.PrismaClientUnknownRequestError && /23001|23503|violates RESTRICT|foreign key constraint/i.test(err.message)) {
+  // Yabancı anahtar (RESTRICT) ihlali her zaman bilinen bir koda çevrilmiyor; mesajdan tanınır (MySQL 1451).
+  if (err instanceof Prisma.PrismaClientUnknownRequestError && /1451|Cannot delete or update a parent row|foreign key constraint/i.test(err.message)) {
     return "Bu kayıt başka kayıtlarda kullanıldığı için silinemez. Gerekirse pasife alın.";
   }
   console.error("[db]", err);

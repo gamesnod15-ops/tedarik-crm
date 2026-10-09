@@ -13,6 +13,7 @@
     "db:status": "prisma migrate status",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "paket": "node scripts/cpanel-paket.mjs",
     "postinstall": "prisma generate"
   },
   "prisma": {

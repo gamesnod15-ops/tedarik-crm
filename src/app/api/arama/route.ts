@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim().slice(0, 80);
   if (q.length < 2) return NextResponse.json({ sonuclar: [] });
 
-  const icerir = { contains: q, mode: "insensitive" as const };
+  const icerir = { contains: q };
   const no = /^#?\d{1,9}$/.test(q) ? Number(q.replace("#", "")) : null;
   const sonuclar: AramaSonuc[] = [];
 

@@ -20,7 +20,7 @@ type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: s
 
 async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
   const where: Prisma.PersonelWhereInput = {
-    ...(sp.q && { adSoyad: { contains: sp.q, mode: "insensitive" } }),
+    ...(sp.q && { adSoyad: { contains: sp.q } }),
   };
   const [rows, total] = await Promise.all([
     db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),

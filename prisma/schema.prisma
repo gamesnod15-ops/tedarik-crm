@@ -1,11 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // native: geliştirme bilgisayarı; rhel-openssl-*: cPanel (CloudLinux) sunucusu
+  binaryTargets = ["native", "rhel-openssl-1.1.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL") // uygulama: havuzlu (pooled) adres
-  directUrl = env("DATABASE_URL_UNPOOLED") // migration: doğrudan adres
+  provider = "mysql" // cPanel'deki MariaDB
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -92,14 +93,14 @@ enum IzinTuru {
 model Cari {
   id             String   @id @default(cuid())
   tipi           CariTipi
-  unvan          String
-  yetkili        String?
-  telefon        String?
-  eposta         String?
-  adres          String?
+  unvan          String   @db.VarChar(255)
+  yetkili        String?  @db.Text
+  telefon        String?  @db.Text
+  eposta         String?  @db.Text
+  adres          String?  @db.Text
   // Devreden bakiye. Müşteri için + = müşteri bize borçlu; tedarikçi için + = biz borçluyuz.
   acilisBakiyesi Decimal  @default(0) @db.Decimal(14, 2)
-  notlar         String?
+  notlar         String?  @db.Text
   // Müşteri ödeme vadesi (gün). Boşsa 30 gün varsayılır; vadesi geçen alacak uyarıları buna göre hesaplanır.
   vadeGunu       Int?
   isActive       Boolean  @default(true)
@@ -116,11 +117,11 @@ model Cari {
 
 model Urun {
   id         String   @id @default(cuid())
-  ad         String
+  ad         String   @db.VarChar(255)
   birim      String   @default("Adet")
   birimFiyat Decimal  @default(0) @db.Decimal(14, 2) // varsayılan; siparişte kalem bazında kaydedilir
   kdvOrani   Int
-  aciklama   String?
+  aciklama   String?  @db.Text
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -144,7 +145,7 @@ model Siparis {
   tarih     DateTime      @db.Date
   cariId    String
   cari      Cari          @relation(fields: [cariId], references: [id], onDelete: Restrict)
-  aciklama  String?
+  aciklama  String?       @db.Text
   durum     SiparisDurumu @default(BEKLIYOR)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
@@ -162,11 +163,11 @@ model SiparisKalem {
   id         String  @id @default(cuid())
   siparisId  String
   siparis    Siparis @relation(fields: [siparisId], references: [id], onDelete: Cascade)
-  urunAdi    String // ürün kartına bağlı değil: siparişe yazıldığı haliyle saklanır
+  urunAdi    String  @db.VarChar(255) // ürün kartına bağlı değil: siparişe yazıldığı haliyle saklanır
   adet       Decimal @db.Decimal(14, 3)
   birimFiyat Decimal @db.Decimal(14, 2)
   kdvOrani   Int
-  aciklama   String?
+  aciklama   String? @db.Text
 
   @@index([siparisId])
 }
@@ -180,7 +181,7 @@ model Odeme {
   islemTipi  IslemTipi
   tutar      Decimal    @db.Decimal(14, 2)
   odemeSekli OdemeSekli @default(NAKIT)
-  aciklama   String?
+  aciklama   String?    @db.Text
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -192,7 +193,7 @@ model Masraf {
   id         String      @id @default(cuid())
   tarih      DateTime    @db.Date
   kategori   String?
-  aciklama   String
+  aciklama   String      @db.Text
   tutar      Decimal     @db.Decimal(14, 2)
   odemeSekli OdemeSekli?
   createdAt  DateTime    @default(now())
@@ -204,14 +205,14 @@ model Masraf {
 
 model Personel {
   id             String        @id @default(cuid())
-  adSoyad        String
+  adSoyad        String        @db.VarChar(255)
   // Personel kartında yalnızca ad soyad girilir; aşağıdaki alanlar eski kayıtlardan kalır, formda yoktur.
   sicilNo        String?       @unique
   departman      String?
   telefon        String?
   iseGirisTarihi DateTime?     @db.Date
   maas           Decimal?      @db.Decimal(14, 2) // yalnızca bilgi: hiçbir hesaplamaya katılmaz
-  aciklama       String?
+  aciklama       String?       @db.Text
   durum          PersonelDurum @default(AKTIF)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -230,7 +231,7 @@ model PersonelOdeme {
   personel   Personel @relation(fields: [personelId], references: [id], onDelete: Cascade)
   tarih      DateTime @db.Date
   tutar      Decimal  @db.Decimal(14, 2)
-  aciklama   String?
+  aciklama   String?  @db.Text
   createdAt  DateTime @default(now())
 
   @@index([personelId, tarih])
@@ -247,7 +248,7 @@ model PersonelHareket {
   izinTuru      IzinTuru?
   izinBaslangic DateTime?   @db.Date
   izinBitis     DateTime?   @db.Date
-  aciklama      String?
+  aciklama      String?     @db.Text
   createdAt     DateTime    @default(now())
 
   @@index([personelId, tarih])
@@ -267,9 +268,9 @@ model Notification {
   userId    String
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   tur       BildirimTuru @default(BILGI)
-  baslik    String
-  mesaj     String?
-  href      String?
+  baslik    String       @db.Text
+  mesaj     String?      @db.Text
+  href      String?      @db.Text
   readAt    DateTime?
   createdAt DateTime     @default(now())
 
@@ -284,7 +285,7 @@ model Alim {
   cariId    String
   cari      Cari     @relation(fields: [cariId], references: [id], onDelete: Restrict)
   faturaNo  String?
-  aciklama  String?
+  aciklama  String?  @db.Text
   miktar    Decimal? @db.Decimal(14, 3)
   toplam    Decimal  @db.Decimal(14, 2)
   createdAt DateTime @default(now())
@@ -298,7 +299,7 @@ model Alim {
 // Her ay kendiliğinden masraf kaydı oluşturan şablon (kira, elektrik, maaş…). Günlük zamanlanmış görev çalıştırır.
 model TekrarlayanMasraf {
   id           String      @id @default(cuid())
-  aciklama     String
+  aciklama     String      @db.Text
   kategori     String?
   tutar        Decimal     @db.Decimal(14, 2)
   odemeSekli   OdemeSekli?

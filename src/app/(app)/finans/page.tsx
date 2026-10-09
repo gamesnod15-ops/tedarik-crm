@@ -49,7 +49,7 @@ async function OdemeBolumu(p: BolumProps) {
     ...(p.tarih && { tarih: p.tarih }),
     ...((p.sp.q || p.sp.cariTipi === "MUSTERI" || p.sp.cariTipi === "TEDARIKCI") && {
       cari: {
-        ...(p.sp.q && { unvan: { contains: p.sp.q, mode: "insensitive" as const } }),
+        ...(p.sp.q && { unvan: { contains: p.sp.q } }),
         ...((p.sp.cariTipi === "MUSTERI" || p.sp.cariTipi === "TEDARIKCI") && { tipi: p.sp.cariTipi }),
       },
     }),
@@ -173,8 +173,8 @@ async function MasrafBolumu(p: BolumProps) {
     ...(p.tarih && { tarih: p.tarih }),
     ...(p.sp.q && {
       OR: [
-        { aciklama: { contains: p.sp.q, mode: "insensitive" as const } },
-        { kategori: { contains: p.sp.q, mode: "insensitive" as const } },
+        { aciklama: { contains: p.sp.q } },
+        { kategori: { contains: p.sp.q } },
       ],
     }),
   };

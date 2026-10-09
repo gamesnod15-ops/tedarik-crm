@@ -41,7 +41,7 @@ async function SiparisListesi({ sp, tip, page, canWrite }: { sp: SP; tip: "MUSTE
   const durum = isDurum(sp.durum) ? sp.durum : undefined;
   const where: Prisma.SiparisWhereInput = {
     ...(durum && { durum }),
-    cari: { tipi: tip, ...(sp.q && { unvan: { contains: sp.q, mode: "insensitive" } }) },
+    cari: { tipi: tip, ...(sp.q && { unvan: { contains: sp.q } }) },
     ...((from || to) && { tarih: { ...(from && { gte: from }), ...(to && { lte: to }) } }),
   };
   const [rows, total, sayilar] = await Promise.all([
@@ -147,9 +147,9 @@ async function AlimListesi({ sp, page, canWrite, baslik }: { sp: SP; page: numbe
   const where: Prisma.AlimWhereInput = {
     ...(sp.q && {
       OR: [
-        { cari: { unvan: { contains: sp.q, mode: "insensitive" } } },
-        { faturaNo: { contains: sp.q, mode: "insensitive" } },
-        { aciklama: { contains: sp.q, mode: "insensitive" } },
+        { cari: { unvan: { contains: sp.q } } },
+        { faturaNo: { contains: sp.q } },
+        { aciklama: { contains: sp.q } },
       ],
     }),
     ...((from || to) && { tarih: { ...(from && { gte: from }), ...(to && { lte: to }) } }),

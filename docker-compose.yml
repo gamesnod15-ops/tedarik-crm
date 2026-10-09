@@ -1,16 +1,17 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: mariadb:11.8
     container_name: tedarik-crm-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: tedarik
-      POSTGRES_PASSWORD: tedarik
-      POSTGRES_DB: tedarik_crm
+      MARIADB_USER: tedarik
+      MARIADB_PASSWORD: tedarik
+      MARIADB_DATABASE: tedarik_crm
+      MARIADB_ROOT_PASSWORD: tedarik-root
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - dbdata:/var/lib/mysql
 
 volumes:
-  pgdata:
+  dbdata:

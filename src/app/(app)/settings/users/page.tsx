@@ -19,8 +19,8 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
   const where: Prisma.UserWhereInput = {
     ...(q && {
       OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
+        { name: { contains: q } },
+        { email: { contains: q } },
       ],
     }),
     ...(status === "active" && { isActive: true }),

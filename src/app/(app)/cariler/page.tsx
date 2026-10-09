@@ -30,8 +30,8 @@ export default async function CarilerPage({ searchParams }: { searchParams: Prom
     tipi,
     ...(sp.q && {
       OR: [
-        { unvan: { contains: sp.q, mode: "insensitive" } },
-        { telefon: { contains: sp.q, mode: "insensitive" } },
+        { unvan: { contains: sp.q } },
+        { telefon: { contains: sp.q } },
       ],
     }),
     ...(sp.durum === "aktif" && { isActive: true }),

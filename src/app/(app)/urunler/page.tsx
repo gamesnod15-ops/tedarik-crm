@@ -24,7 +24,7 @@ export default async function UrunlerPage({ searchParams }: { searchParams: Prom
   const canWrite = can(user, "siparisler:write");
 
   const where: Prisma.UrunWhereInput = {
-    ...(sp.q && { ad: { contains: sp.q, mode: "insensitive" } }),
+    ...(sp.q && { ad: { contains: sp.q } }),
     ...(sp.durum === "aktif" && { isActive: true }),
     ...(sp.durum === "pasif" && { isActive: false }),
   };

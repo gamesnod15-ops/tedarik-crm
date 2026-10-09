@@ -1,15 +1,15 @@
 # Tuşba Nakış
 
-Next.js 15 + PostgreSQL + Prisma + Auth.js. Genel taslak: [docs/TASLAK.md](docs/TASLAK.md)
+Next.js 15 + MariaDB/MySQL + Prisma + Auth.js. Genel taslak: [docs/TASLAK.md](docs/TASLAK.md)
 
 ## Yerel kurulum (Windows PowerShell)
 
-Gereksinimler: Node.js 20+, PostgreSQL (Docker Desktop ile `npm run db:up` ya da kendi sunucunuz).
+Gereksinimler: Node.js 20+, MariaDB/MySQL (Docker Desktop ile `npm run db:up` ya da kendi sunucunuz).
 
 ```powershell
 npm install
 copy .env.example .env        # sonra .env içinde AUTH_SECRET'i doldurun
-npm run db:up                 # PostgreSQL'i Docker'da başlatır
+npm run db:up                 # MariaDB'yi Docker'da başlatır
 npm run db:deploy             # mevcut migration'ları uygular
 npm run db:seed               # ilk yönetici hesabını oluşturur
 npm run dev
@@ -17,30 +17,29 @@ npm run dev
 
 `AUTH_SECRET` üretmek için: `npx auth secret` ya da `openssl rand -base64 32`.
 
-## Canlıya alma
+## Canlıya alma (cPanel)
 
-1. **Canlı PostgreSQL** hazırlayın ve bağlantı adresini alın (`postgresql://kullanıcı:şifre@host:5432/db?schema=public&sslmode=require`).
-2. **Sunucunun ortam değişkenlerine** [.env.example](.env.example) sonundaki canlı bölümünü girin: `DATABASE_URL` ve `DATABASE_URL_UNPOOLED` (Neon entegrasyonu kendisi ekler), `AUTH_SECRET` (yerelden farklı), `AUTH_URL`, `AUTH_TRUST_HOST`.
-3. **Migration'ı kendi bilgisayarınızdan** canlı veritabanına uygulayın (Windows PowerShell):
+Canlı adres: https://tusbacrm.tusbanakis.com — cPanel'de **Setup Node.js App** (Node 22, Passenger) ve aynı sunucudaki **MariaDB** (`tusbanak_crm`).
+
+- Uygulama klasörü: `~/tusbacrm`, başlangıç dosyası `app/server.js` (Next.js `standalone` çıktısı).
+- Ortam değişkenleri Node.js App ekranında girilir: [.env.example](.env.example) sonundaki canlı bölümü.
+- Günlük görev: cPanel **Cron İşleri**, her gün 08:00'de `curl -fsS -H "Authorization: Bearer <CRON_SECRET>" https://tusbacrm.tusbanakis.com/api/cron/gunluk`.
+- SSL: cPanel **Lets Encrypt™ SSL** (kendiliğinden yenilenir). Site klasöründeki `.well-known/.htaccess` (`PassengerEnabled off`) doğrulama dosyalarının Node.js'e gitmeden sunulmasını sağlar; silmeyin.
+
+### Yeni sürüm yayınlamak
+
+1. Şema değiştiyse migration'ı **kendi bilgisayarınızdan** canlıya uygulayın (cPanel > Remote Database Access'te IP'nizin ekli olması gerekir):
 
    ```powershell
-   # Vercel > Settings > Environment Variables'tan iki değeri kopyalayın:
-   $env:DATABASE_URL = "<havuzlu adres>"
-   $env:DATABASE_URL_UNPOOLED = "<doğrudan (unpooled) adres>"
+   $env:DATABASE_URL = "mysql://tusbanak_crm:<şifre>@mt-xtar.guzelhosting.com:3306/tusbanak_crm"
    npm run db:status      # hangi migration'lar uygulanmış/bekliyor
-   npm run db:deploy      # bekleyenleri uygular (veri silmez, sadece migration dosyalarını çalıştırır)
+   npm run db:deploy      # bekleyenleri uygular (veri silmez)
+   Remove-Item Env:DATABASE_URL
    ```
 
-   İlk yönetici için (yalnızca bir kez):
-
-   ```powershell
-   $env:SEED_ADMIN_EMAIL = "yonetici@firma.com"
-   $env:SEED_ADMIN_PASSWORD = "en-az-10-karakter-guclu-sifre1"
-   npm run db:seed
-   ```
-
-   Seed ile oluşan yönetici ilk girişte şifresini değiştirmek zorundadır. İşiniz bitince aynı oturumda `Remove-Item Env:DATABASE_URL, Env:DATABASE_URL_UNPOOLED` yazın; yoksa sonraki komutlar yanlışlıkla canlıya gider.
-4. **Uygulamayı derleyip başlatın** (sunucuda): `npm ci && npm run build && npm start` (varsayılan port 3000; başına nginx/Caddy gibi bir HTTPS proxy koyun).
+2. Paketi hazırlayın: `npm run build` ardından `npm run paket` → `cpanel-paket.tar.gz`.
+3. cPanel **Dosya Yöneticisi** ile `~/tusbacrm` içine yükleyip **Extract** edin (mevcut `app/` klasörünün üzerine yazar), arşivi silin.
+4. **Setup Node.js App** > uygulama > **RESTART**.
 
 ### Şema değişikliği yaparken
 

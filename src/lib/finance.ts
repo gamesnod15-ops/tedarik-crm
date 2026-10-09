@@ -20,8 +20,8 @@ export function siparisToplam(kalemler: { adet: Dec; birimFiyat: Dec; kdvOrani: 
   return kalemler.reduce((sum, k) => sum.add(kalemToplam(k)), new Prisma.Decimal(0));
 }
 
-// SQL tarafında aynı formül (Postgres ROUND ile JS toDecimalPlaces(2) pozitif değerlerde aynı sonucu verir).
-const KALEM_SQL = Prisma.sql`ROUND(k."adet" * k."birimFiyat" * (100 + k."kdvOrani") / 100, 2)`;
+// SQL tarafında aynı formül (MySQL ROUND ile JS toDecimalPlaces(2) pozitif değerlerde aynı sonucu verir).
+const KALEM_SQL = Prisma.sql`ROUND(k.adet * k.birimFiyat * (100 + k.kdvOrani) / 100, 2)`;
 
 /**
  * Bakiye = açılış + siparişler + alımlar ± ödemeler.
@@ -38,13 +38,13 @@ export async function getBakiyeler(ids: string[]) {
   const map = new Map<string, Prisma.Decimal>();
   if (ids.length === 0) return map;
   const rows = await db.$queryRaw<{ id: string; bakiye: Prisma.Decimal }[]>(Prisma.sql`
-    SELECT c."id",
-      c."acilisBakiyesi"
-      + COALESCE((SELECT SUM(${KALEM_SQL}) FROM "Siparis" s JOIN "SiparisKalem" k ON k."siparisId" = s."id" WHERE s."cariId" = c."id" AND s."durum" <> 'IPTAL'), 0)
-      + COALESCE((SELECT SUM(a."toplam") FROM "Alim" a WHERE a."cariId" = c."id"), 0)
-      + COALESCE((SELECT SUM(CASE WHEN (c."tipi" = 'MUSTERI' AND o."islemTipi" = 'TAHSILAT') OR (c."tipi" = 'TEDARIKCI' AND o."islemTipi" = 'ODEME')
-                               THEN -o."tutar" ELSE o."tutar" END) FROM "Odeme" o WHERE o."cariId" = c."id"), 0) AS "bakiye"
-    FROM "Cari" c WHERE c."id" = ANY(${ids}::text[])
+    SELECT c.id,
+      c.acilisBakiyesi
+      + COALESCE((SELECT SUM(${KALEM_SQL}) FROM Siparis s JOIN SiparisKalem k ON k.siparisId = s.id WHERE s.cariId = c.id AND s.durum <> 'IPTAL'), 0)
+      + COALESCE((SELECT SUM(a.toplam) FROM Alim a WHERE a.cariId = c.id), 0)
+      + COALESCE((SELECT SUM(CASE WHEN (c.tipi = 'MUSTERI' AND o.islemTipi = 'TAHSILAT') OR (c.tipi = 'TEDARIKCI' AND o.islemTipi = 'ODEME')
+                               THEN -o.tutar ELSE o.tutar END) FROM Odeme o WHERE o.cariId = c.id), 0) AS bakiye
+    FROM Cari c WHERE c.id IN (${Prisma.join(ids)})
   `);
   for (const r of rows) map.set(r.id, new Prisma.Decimal(r.bakiye));
   return map;
@@ -63,9 +63,9 @@ export type Ozet = {
 export async function getOzet(from: Date, to: Date): Promise<Ozet> {
   const [sip, odm, msr, alm] = await Promise.all([
     db.$queryRaw<{ tipi: string; toplam: Prisma.Decimal }[]>(Prisma.sql`
-      SELECT c."tipi"::text AS "tipi", COALESCE(SUM(${KALEM_SQL}), 0) AS "toplam"
-      FROM "Siparis" s JOIN "SiparisKalem" k ON k."siparisId" = s."id" JOIN "Cari" c ON c."id" = s."cariId"
-      WHERE s."durum" <> 'IPTAL' AND s."tarih" >= ${iso(from)}::date AND s."tarih" <= ${iso(to)}::date GROUP BY c."tipi"`),
+      SELECT c.tipi AS tipi, COALESCE(SUM(${KALEM_SQL}), 0) AS toplam
+      FROM Siparis s JOIN SiparisKalem k ON k.siparisId = s.id JOIN Cari c ON c.id = s.cariId
+      WHERE s.durum <> 'IPTAL' AND s.tarih >= CAST(${iso(from)} AS DATE) AND s.tarih <= CAST(${iso(to)} AS DATE) GROUP BY c.tipi`),
     db.odeme.groupBy({ by: ["islemTipi"], where: { tarih: { gte: from, lte: to } }, _sum: { tutar: true } }),
     db.masraf.aggregate({ where: { tarih: { gte: from, lte: to } }, _sum: { tutar: true } }),
     db.alim.aggregate({ where: { tarih: { gte: from, lte: to } }, _sum: { toplam: true } }),
