@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { formatDate, formatMoney, toDateInput } from "@/lib/format";
+import { donemAdi } from "@/lib/ekstre";
+import { AutoForm } from "@/components/auto-form";
 import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { UzunMetin } from "@/components/uzun-metin";
@@ -23,9 +25,19 @@ function Kutu({ label, value, alt, tone = "text-slate-900", vurgu = false }: { l
   );
 }
 
-export default async function PersonelDetayPage({ params }: { params: Promise<{ id: string }> }) {
+/** Ödeme tarihleri UTC gece yarısı tutulur: "YYYY-MM" ay anahtarı doğrudan ISO tarihten çıkar. */
+const ayKey = (d: Date) => d.toISOString().slice(0, 7);
+
+export default async function PersonelDetayPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ ay?: string }>;
+}) {
   const user = await requireUser("personel:read");
   const { id } = await params;
+  const sp = await searchParams;
   const canWrite = can(user, "personel:write");
 
   const personel = await db.personel.findUnique({
@@ -38,9 +50,15 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
   });
   if (!personel) notFound();
 
+  // Ay seçenekleri yalnızca ödemesi olan aylardır (yeniden eskiye).
+  const aylar = [...new Set(personel.odemeler.map((o) => ayKey(o.tarih)))];
+  const ay = sp.ay && aylar.includes(sp.ay) ? sp.ay : "";
+  const ayAdi = (k: string) => donemAdi({ tip: "AY", yil: Number(k.slice(0, 4)), ay: Number(k.slice(5, 7)) });
+  const odemeler = ay ? personel.odemeler.filter((o) => ayKey(o.tarih) === ay) : personel.odemeler;
+
   // Ödemeler yalnızca bilgi amaçlıdır: bu toplam hiçbir finans/bakiye/rapor hesabına katılmaz.
-  const toplam = personel.odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
-  const son = personel.odemeler[0];
+  const toplam = odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
+  const son = odemeler[0];
   const kalan = kalanMiktar(personel.maas, toplam);
 
   return (
@@ -82,7 +100,7 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kutu label="Sabit maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt={personel.maas ? undefined : "Düzenle'den girilebilir"} />
-        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${personel.odemeler.length} ödeme`} />
+        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${odemeler.length} ödeme${ay ? ` · ${ayAdi(ay)}` : ""}`} />
         <Kutu
           label="Kalan miktar"
           value={kalan ? formatMoney(kalan.abs()) : "—"}
@@ -94,7 +112,18 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
       </section>
 
       <section className="card overflow-x-auto">
-        <h2 className="border-b border-slate-300 px-5 py-3 text-sm font-semibold">Ödemeler</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 px-5 py-3">
+          <h2 className="text-sm font-semibold">Ödemeler{ay && ` · ${ayAdi(ay)}`}</h2>
+          {aylar.length > 0 && (
+            <AutoForm className="flex items-center gap-2">
+              <label className="text-sm text-slate-500" htmlFor="ay">Ay</label>
+              <select id="ay" name="ay" defaultValue={ay} className="input w-44">
+                <option value="">Tüm aylar</option>
+                {aylar.map((k) => <option key={k} value={k}>{ayAdi(k)}</option>)}
+              </select>
+            </AutoForm>
+          )}
+        </div>
         <table className="w-full">
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
@@ -105,10 +134,10 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {personel.odemeler.length === 0 && (
+            {odemeler.length === 0 && (
               <tr><td colSpan={4} className="td py-8 text-center text-slate-400">Henüz ödeme girilmemiş.</td></tr>
             )}
-            {personel.odemeler.map((o) => (
+            {odemeler.map((o) => (
               <tr key={o.id}>
                 <td className="td whitespace-nowrap">{formatDate(o.tarih)}</td>
                 <td className="td text-right font-medium tabular-nums">{formatMoney(o.tutar)}</td>
@@ -141,7 +170,7 @@ export default async function PersonelDetayPage({ params }: { params: Promise<{ 
           </tbody>
         </table>
         <MobileTables />
-        {personel.odemeler.length > 0 && (
+        {odemeler.length > 0 && (
           <div className="space-y-1 border-t border-slate-300 bg-slate-50 px-5 py-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-700">Toplam</span>

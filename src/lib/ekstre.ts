@@ -70,7 +70,7 @@ export async function getEkstre(cariId: string, donem: Donem) {
         sira: s.createdAt.getTime() + i,
         tur: "SIPARIS",
         model: k.urunAdi,
-        detay: [`Sipariş #${s.no}`, k.aciklama].filter(Boolean).join(" · "),
+        detay: k.aciklama || undefined,
         miktar: k.adet,
         fiyat: k.birimFiyat,
         tutar: kalemAra(k),
