@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
-import { ayKaydir, donemAdi, donemKey, getEkstre, parseDonem } from "@/lib/ekstre";
+import { donemAdi, donemKey, getEkstre, parseDonem } from "@/lib/ekstre";
 import { formatDate, formatMoney, formatQty, todayInput } from "@/lib/format";
 import { PrintButton } from "@/components/print-button";
+import { AySecici } from "@/components/ay-secici";
 import { RecordDialog } from "@/components/record-dialog";
 import { saveCariAction } from "../actions";
 import { CARI_TIP_LABELS, cariFieldsFor } from "../fields";
@@ -60,8 +61,6 @@ export default async function CariDetayPage({
   const bakiye = ekstre.sonBakiye;
   const bakiyeLabel = musteri ? (bakiye.isNegative() ? "Müşteri alacaklı" : "Kalan (alacağımız)") : bakiye.isNegative() ? "Tedarikçi bize borçlu" : "Kalan (borcumuz)";
   const aylik = donem.tip === "AY";
-  const onceki = aylik ? donemKey(ayKaydir(donem, -1)) : null;
-  const sonraki = aylik ? donemKey(ayKaydir(donem, 1)) : null;
   const base = `/cariler/${cari.id}`;
 
   return (
@@ -129,28 +128,7 @@ export default async function CariDetayPage({
         </div>
       </header>
 
-      {/* Dönem seçimi */}
-      <div className="card flex flex-wrap items-center gap-3 p-3 print:hidden">
-        {aylik ? (
-          <>
-            <Link href={`${base}?ay=${onceki}`} className="btn-secondary px-3" aria-label="Önceki ay">←</Link>
-            <span className="min-w-36 text-center text-sm font-semibold text-slate-900">{donemAdi(donem)}</span>
-            <Link href={`${base}?ay=${sonraki}`} className="btn-secondary px-3" aria-label="Sonraki ay">→</Link>
-          </>
-        ) : (
-          <span className="text-sm font-semibold text-slate-900">{donemAdi(donem)}</span>
-        )}
-        <form className="ml-auto flex items-center gap-2">
-          <label className="sr-only" htmlFor="ay">Ay seç</label>
-          <input id="ay" name="ay" type="month" defaultValue={aylik ? donemKey(donem) : ""} className="input w-44" />
-          <button className="btn-secondary">Göster</button>
-        </form>
-        {aylik ? (
-          <Link href={`${base}?ay=tum`} className="text-sm text-petrol-700 hover:underline">Tüm hareketler</Link>
-        ) : (
-          <Link href={`${base}?ay=${donemKey(parseDonem(undefined, "AY"))}`} className="text-sm text-petrol-700 hover:underline">Bu ay</Link>
-        )}
-      </div>
+      <AySecici base={base} donem={donem} />
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label={aylik ? "Devreden (önceki aydan)" : "Açılış bakiyesi"} value={formatMoney(ekstre.devreden)} />

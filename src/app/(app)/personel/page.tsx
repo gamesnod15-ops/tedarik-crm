@@ -15,10 +15,12 @@ import { TUR_LABELS, hareketAyrinti, hareketFields, kalanMiktar, personelFields 
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
+import { AySecici } from "@/components/ay-secici";
+import { donemAdi, donemAraligi, donemKey, parseDonem, type Donem } from "@/lib/ekstre";
 
-type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; page?: string };
+type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; ay?: string; page?: string };
 
-async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; canWrite: boolean }) {
+async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: number; canWrite: boolean; donem: Donem }) {
   const where: Prisma.PersonelWhereInput = {
     ...(sp.q && { adSoyad: { contains: sp.q } }),
   };
@@ -26,18 +28,27 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
     db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
     db.personel.count({ where }),
   ]);
-  // Her personelin ödemelerinin toplamı (yalnızca bilgi; hiçbir hesaplamaya katılmaz).
+  // Her personelin seçilen dönemdeki ödemelerinin toplamı (yalnızca bilgi; hiçbir hesaplamaya katılmaz).
+  const aralik = donemAraligi(donem);
   const toplamlar = new Map(
-    (await db.personelOdeme.groupBy({ by: ["personelId"], where: { personelId: { in: rows.map((r) => r.id) } }, _sum: { tutar: true } })).map((t) => [t.personelId, t._sum.tutar]),
+    (
+      await db.personelOdeme.groupBy({
+        by: ["personelId"],
+        where: { personelId: { in: rows.map((r) => r.id) }, ...(aralik && { tarih: aralik }) },
+        _sum: { tutar: true },
+      })
+    ).map((t) => [t.personelId, t._sum.tutar]),
   );
+  const ay = donemKey(donem);
 
   return (
     <>
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value="KART" />
+        <input type="hidden" name="ay" value={ay} />
         <SearchInput defaultValue={sp.q ?? ""} placeholder="Ad soyad" className="w-72" />
         <button className="sr-only">Filtrele</button>
-        {sp.q && <Link href="?tip=KART" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+        {sp.q && <Link href={`?tip=KART&ay=${ay}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
@@ -46,7 +57,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
             <tr>
               <th className="th">Ad soyad</th>
               <th className="th text-right">Sabit maaş</th>
-              <th className="th text-right">Toplam ödeme</th>
+              <th className="th text-right">Toplam ödeme · {donemAdi(donem)}</th>
               <th className="th text-right">Kalan</th>
               <th className="th">Açıklama</th>
               <th className="th" />
@@ -92,7 +103,7 @@ async function PersonelKartlari({ sp, page, canWrite }: { sp: SP; page: number; 
         </table>
         <MobileTables />
       </div>
-      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "KART", q: sp.q }} />
+      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "KART", q: sp.q, ay }} />
     </>
   );
 }
@@ -223,6 +234,8 @@ export default async function PersonelPage({ searchParams }: { searchParams: Pro
   const tip = sp.tip === "HAREKET" ? "HAREKET" : "KART";
   const page = pageOf(sp.page);
   const canWrite = can(user, "personel:write");
+  // Personel kartlarında ödeme toplamı ve kalan, seçilen aya göre (varsayılan bu ay) hesaplanır.
+  const donem = parseDonem(sp.ay, "AY");
 
   // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için İş Hareketleri kendi başlık satırını oluşturur.
   const baslik = (
@@ -261,8 +274,9 @@ export default async function PersonelPage({ searchParams }: { searchParams: Pro
         )}
       </header>
 
+      <AySecici base="/personel" donem={donem} params={{ tip: "KART", q: sp.q }} />
 
-      <PersonelKartlari sp={sp} page={page} canWrite={canWrite} />
+      <PersonelKartlari sp={sp} page={page} canWrite={canWrite} donem={donem} />
     </div>
   );
 }

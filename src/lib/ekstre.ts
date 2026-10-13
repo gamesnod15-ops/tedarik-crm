@@ -43,6 +43,10 @@ export function ayKaydir(d: Extract<Donem, { tip: "AY" }>, delta: number): Extra
 const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 export const donemAdi = (d: Donem) => (d.tip === "TUM" ? "Tüm hareketler" : `${AY_ADLARI[d.ay - 1]} ${d.yil}`);
 
+/** Aylık dönemin tarih aralığı (Prisma filtresi olarak): başlangıç dahil, sonraki ayın ilk günü hariç. Tüm hareketlerde null. */
+export const donemAraligi = (d: Donem) =>
+  d.tip === "AY" ? { gte: new Date(Date.UTC(d.yil, d.ay - 1, 1)), lt: new Date(Date.UTC(d.yil, d.ay, 1)) } : null;
+
 /**
  * Cari hesap ekstresi. Devreden = açılış bakiyesi + dönemden önceki tüm hareketlerin etkisi (kayıt tutulmaz, hesaplanır).
  * Böylece eski bir kayıt düzeltilince sonraki tüm aylar kendiliğinden doğru olur.

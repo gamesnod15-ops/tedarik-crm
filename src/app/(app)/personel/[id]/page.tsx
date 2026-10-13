@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { formatDate, formatMoney, toDateInput } from "@/lib/format";
-import { donemAdi } from "@/lib/ekstre";
-import { AutoForm } from "@/components/auto-form";
+import { donemAdi, donemAraligi, parseDonem } from "@/lib/ekstre";
+import { AySecici } from "@/components/ay-secici";
 import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { UzunMetin } from "@/components/uzun-metin";
@@ -25,9 +25,6 @@ function Kutu({ label, value, alt, tone = "text-slate-900", vurgu = false }: { l
   );
 }
 
-/** Ödeme tarihleri UTC gece yarısı tutulur: "YYYY-MM" ay anahtarı doğrudan ISO tarihten çıkar. */
-const ayKey = (d: Date) => d.toISOString().slice(0, 7);
-
 export default async function PersonelDetayPage({
   params,
   searchParams,
@@ -40,21 +37,23 @@ export default async function PersonelDetayPage({
   const sp = await searchParams;
   const canWrite = can(user, "personel:write");
 
+  // Varsayılan bu ay: ödemeler, iş hareketleri ve kutulardaki toplamlar seçilen aya göre hesaplanır.
+  const donem = parseDonem(sp.ay, "AY");
+  const aralik = donemAraligi(donem);
+  const aylik = aralik !== null;
+
   const personel = await db.personel.findUnique({
     where: { id },
     include: {
-      odemeler: { orderBy: [{ tarih: "desc" }, { createdAt: "desc" }] },
-      hareketler: { orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: SON_HAREKET },
+      odemeler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }] },
+      // Ay seçiliyken o ayın tüm hareketleri, "Tüm hareketler"de son birkaç hareket gösterilir.
+      hareketler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: aylik ? undefined : SON_HAREKET },
       _count: { select: { hareketler: true } },
     },
   });
   if (!personel) notFound();
 
-  // Ay seçenekleri yalnızca ödemesi olan aylardır (yeniden eskiye).
-  const aylar = [...new Set(personel.odemeler.map((o) => ayKey(o.tarih)))];
-  const ay = sp.ay && aylar.includes(sp.ay) ? sp.ay : "";
-  const ayAdi = (k: string) => donemAdi({ tip: "AY", yil: Number(k.slice(0, 4)), ay: Number(k.slice(5, 7)) });
-  const odemeler = ay ? personel.odemeler.filter((o) => ayKey(o.tarih) === ay) : personel.odemeler;
+  const odemeler = personel.odemeler;
 
   // Ödemeler yalnızca bilgi amaçlıdır: bu toplam hiçbir finans/bakiye/rapor hesabına katılmaz.
   const toplam = odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
@@ -98,9 +97,11 @@ export default async function PersonelDetayPage({
         </section>
       )}
 
+      <AySecici base={`/personel/${personel.id}`} donem={donem} />
+
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kutu label="Sabit maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt={personel.maas ? undefined : "Düzenle'den girilebilir"} />
-        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${odemeler.length} ödeme${ay ? ` · ${ayAdi(ay)}` : ""}`} />
+        <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${odemeler.length} ödeme · ${donemAdi(donem)}`} />
         <Kutu
           label="Kalan miktar"
           value={kalan ? formatMoney(kalan.abs()) : "—"}
@@ -112,18 +113,7 @@ export default async function PersonelDetayPage({
       </section>
 
       <section className="card overflow-x-auto">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-300 px-5 py-3">
-          <h2 className="text-sm font-semibold">Ödemeler{ay && ` · ${ayAdi(ay)}`}</h2>
-          {aylar.length > 0 && (
-            <AutoForm className="flex items-center gap-2">
-              <label className="text-sm text-slate-500" htmlFor="ay">Ay</label>
-              <select id="ay" name="ay" defaultValue={ay} className="input w-44">
-                <option value="">Tüm aylar</option>
-                {aylar.map((k) => <option key={k} value={k}>{ayAdi(k)}</option>)}
-              </select>
-            </AutoForm>
-          )}
-        </div>
+        <h2 className="border-b border-slate-300 px-5 py-3 text-sm font-semibold">Ödemeler · {donemAdi(donem)}</h2>
         <table className="w-full">
           <thead className="border-b border-slate-300 bg-slate-50">
             <tr>
@@ -135,7 +125,7 @@ export default async function PersonelDetayPage({
           </thead>
           <tbody className="divide-y divide-slate-200">
             {odemeler.length === 0 && (
-              <tr><td colSpan={4} className="td py-8 text-center text-slate-400">Henüz ödeme girilmemiş.</td></tr>
+              <tr><td colSpan={4} className="td py-8 text-center text-slate-400">{aylik ? "Bu ayda ödeme yok." : "Henüz ödeme girilmemiş."}</td></tr>
             )}
             {odemeler.map((o) => (
               <tr key={o.id}>
@@ -190,7 +180,7 @@ export default async function PersonelDetayPage({
 
       <section className="card overflow-x-auto">
         <div className="flex items-center justify-between border-b border-slate-300 px-5 py-3">
-          <h2 className="text-sm font-semibold">Son iş hareketleri</h2>
+          <h2 className="text-sm font-semibold">{aylik ? `İş hareketleri · ${donemAdi(donem)}` : "Son iş hareketleri"}</h2>
           {personel._count.hareketler > 0 && (
             <Link href={`/personel?tip=HAREKET&personel=${personel.id}`} className="text-sm text-petrol-700 hover:underline">
               Tümü ({personel._count.hareketler})
@@ -208,7 +198,7 @@ export default async function PersonelDetayPage({
           </thead>
           <tbody className="divide-y divide-slate-200">
             {personel.hareketler.length === 0 && (
-              <tr><td colSpan={4} className="td py-8 text-center text-slate-400">İş hareketi yok.</td></tr>
+              <tr><td colSpan={4} className="td py-8 text-center text-slate-400">{aylik ? "Bu ayda iş hareketi yok." : "İş hareketi yok."}</td></tr>
             )}
             {personel.hareketler.map((h) => (
               <tr key={h.id}>
