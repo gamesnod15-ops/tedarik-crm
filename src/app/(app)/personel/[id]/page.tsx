@@ -3,14 +3,14 @@ import { Prisma } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
-import { formatDate, formatMoney, toDateInput } from "@/lib/format";
+import { formatDate, formatMoney, monthStartInput, parseDateInput, toDateInput } from "@/lib/format";
 import { donemAdi, donemAraligi, parseDonem } from "@/lib/ekstre";
 import { AySecici } from "@/components/ay-secici";
 import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { UzunMetin } from "@/components/uzun-metin";
 import { MobileTables } from "@/components/mobile-tables";
-import { TUR_LABELS, hareketAyrinti, kalanMiktar, odemeFields, personelFields } from "../fields";
+import { TUR_LABELS, aylikMaas, hareketAyrinti, kalanMiktar, odemeFields, personelFields, toplamHakedis } from "../fields";
 import { deletePersonelOdemeAction, savePersonelAction, savePersonelOdemeAction } from "../actions";
 
 const SON_HAREKET = 10;
@@ -48,6 +48,7 @@ export default async function PersonelDetayPage({
       odemeler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }] },
       // Ay seçiliyken o ayın tüm hareketleri, "Tüm hareketler"de son birkaç hareket gösterilir.
       hareketler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: aylik ? undefined : SON_HAREKET },
+      maasGecmisi: { select: { ay: true, maas: true } },
       _count: { select: { hareketler: true } },
     },
   });
@@ -58,7 +59,17 @@ export default async function PersonelDetayPage({
   // Ödemeler yalnızca bilgi amaçlıdır: bu toplam hiçbir finans/bakiye/rapor hesabına katılmaz.
   const toplam = odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
   const son = odemeler[0];
-  const kalan = kalanMiktar(personel.maas, toplam);
+
+  // Sabit maaş aya göre geçmişten okunur: sonradan değişen maaş önceki ayları etkilemez.
+  // "Tüm hareketler"de güncel maaş gösterilir; kalan = ilk maaş ayından bu aya kadarki toplam hak ediş − tüm ödemeler.
+  const gecmis = personel.maasGecmisi;
+  const buAy = parseDateInput(monthStartInput())!;
+  const maas = aylikMaas(gecmis, aralik ? aralik.gte : buAy);
+  const hakedis = aylik ? null : toplamHakedis(gecmis, buAy);
+  const kalan = aylik ? kalanMiktar(maas, toplam) : kalanMiktar(hakedis, toplam);
+  const maasAlt = aylik
+    ? maas ? donemAdi(donem) : gecmis.length ? "Bu ay için maaş tanımlı değil" : "Düzenle'den girilebilir"
+    : hakedis ? `Toplam hak ediş ${formatMoney(hakedis)}` : "Düzenle'den girilebilir";
 
   return (
     <div className="space-y-5">
@@ -100,12 +111,12 @@ export default async function PersonelDetayPage({
       <AySecici base={`/personel/${personel.id}`} donem={donem} />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kutu label="Sabit maaş" value={personel.maas ? formatMoney(personel.maas) : "—"} alt={personel.maas ? undefined : "Düzenle'den girilebilir"} />
+        <Kutu label={aylik ? "Sabit maaş" : "Güncel sabit maaş"} value={maas ? formatMoney(maas) : "—"} alt={maasAlt} />
         <Kutu label="Toplam ödeme" value={formatMoney(toplam)} alt={`${odemeler.length} ödeme · ${donemAdi(donem)}`} />
         <Kutu
           label="Kalan miktar"
           value={kalan ? formatMoney(kalan.abs()) : "—"}
-          alt={kalan === null ? "Sabit maaş girilmemiş" : kalan.isNegative() ? "Maaştan fazla ödendi" : kalan.isZero() ? "Tamamı ödendi" : "Sabit maaş − toplam ödeme"}
+          alt={kalan === null ? "Sabit maaş girilmemiş" : kalan.isNegative() ? "Maaştan fazla ödendi" : kalan.isZero() ? "Tamamı ödendi" : aylik ? "Sabit maaş − toplam ödeme" : "Toplam hak ediş − toplam ödeme"}
           tone={kalan?.isNegative() ? "text-red-700" : "text-slate-900"}
           vurgu
         />
@@ -168,7 +179,7 @@ export default async function PersonelDetayPage({
             </div>
             {kalan !== null && (
               <div className="flex items-center justify-between">
-                <span className="text-slate-600">Kalan miktar (sabit maaş {formatMoney(personel.maas!)})</span>
+                <span className="text-slate-600">Kalan miktar ({aylik ? `sabit maaş ${formatMoney(maas!)}` : `toplam hak ediş ${formatMoney(hakedis!)}`})</span>
                 <span className={`font-semibold tabular-nums ${kalan.isNegative() ? "text-red-700" : "text-slate-900"}`}>
                   {kalan.isNegative() ? `${formatMoney(kalan.abs())} fazla ödeme` : formatMoney(kalan)}
                 </span>

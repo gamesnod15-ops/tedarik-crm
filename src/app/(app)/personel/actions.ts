@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { requireUser } from "@/lib/session";
+import { monthStartInput, parseDateInput } from "@/lib/format";
+import { aylikMaas } from "./fields";
 import { dateField, dbErrorMessage, firstIssue, moneyField, optDate, optMoney, optText, reqText, type FormState } from "@/lib/crud";
 
 const hhmm = (label: string) =>
@@ -27,7 +29,7 @@ function refresh() {
 const personelSchema = z.object({
   id: z.string().optional(),
   adSoyad: reqText("Ad soyad", 150),
-  // Maaş personelin kendi bilgisidir; hiçbir hesaplamada kullanılmaz.
+  // Maaş personelin kendi bilgisidir; finans/rapor hesaplarında kullanılmaz.
   maas: optMoney("Maaş"),
   aciklama: optText(2000),
 });
@@ -40,12 +42,23 @@ export async function savePersonelAction(_prev: FormState, formData: FormData): 
   // Maaş boş bırakılırsa 0 değil "girilmemiş" (null) kaydedilir.
   const data = { ...rest, maas: String(formData.get("maas") ?? "").trim() ? rest.maas : null };
 
+  // Maaş değişikliği bu aydan itibaren geçerlidir: bu ayın geçmiş kaydı yazılır, önceki aylar eski maaşla kalır.
+  const buAy = parseDateInput(monthStartInput())!;
+
   try {
     if (id) {
-      await db.personel.update({ where: { id }, data });
+      const gecmis = await db.personelMaas.findMany({ where: { personelId: id }, select: { ay: true, maas: true } });
+      const onceki = aylikMaas(gecmis, buAy);
+      const degisti = onceki === null || data.maas === null ? onceki !== data.maas : !onceki.equals(data.maas);
+      await db.$transaction([
+        db.personel.update({ where: { id }, data }),
+        ...(degisti
+          ? [db.personelMaas.upsert({ where: { personelId_ay: { personelId: id, ay: buAy } }, create: { personelId: id, ay: buAy, maas: data.maas }, update: { maas: data.maas } })]
+          : []),
+      ]);
       await audit({ userId: actor.id, action: "personel.update", entity: "Personel", entityId: id, meta: { adSoyad: data.adSoyad } });
     } else {
-      const p = await db.personel.create({ data });
+      const p = await db.personel.create({ data: { ...data, ...(data.maas !== null && { maasGecmisi: { create: { ay: buAy, maas: data.maas } } }) } });
       await audit({ userId: actor.id, action: "personel.create", entity: "Personel", entityId: p.id, meta: { adSoyad: data.adSoyad } });
     }
   } catch (err) {

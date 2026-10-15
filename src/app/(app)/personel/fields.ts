@@ -6,10 +6,10 @@ export const IZIN_LABELS = { YILLIK: "Yıllık izin", RAPORLU: "Raporlu", UCRETS
 export const TUR_LABELS = { GIRIS_CIKIS: "Giriş / Çıkış", IZIN: "İzin" } as const;
 
 // Personel kartı: ad soyad, maaş ve açıklama. Yapılan ödemeler personel detay sayfasında ayrı kayıtlar olarak tutulur.
-// Kalan miktar = sabit maaş − girilen ödemelerin toplamı. Maaş ve ödemeler finans, bakiye ve rapor hesaplarına katılmaz.
+// Kalan miktar = o ayın sabit maaşı − o ayın ödemeleri. Maaş ve ödemeler finans, bakiye ve rapor hesaplarına katılmaz.
 export const personelFields: Field[] = [
   { name: "adSoyad", label: "Ad soyad", required: true, placeholder: "Adı Soyadı" },
-  { name: "maas", label: "Sabit maaş (TL)", type: "number", placeholder: "0,00", hint: "Girilen ödemeler bu tutardan düşülür, kalan miktar gösterilir. Finans ve raporlara katılmaz." },
+  { name: "maas", label: "Sabit maaş (TL)", type: "number", placeholder: "0,00", hint: "Değişiklik bu aydan itibaren geçerlidir; önceki aylar eski maaşla kalır. Ödemeler bu tutardan düşülür. Finans ve raporlara katılmaz." },
   { name: "aciklama", label: "Açıklama", type: "textarea", placeholder: "İsteğe bağlı not" },
 ];
 
@@ -66,4 +66,24 @@ export function hareketAyrinti(h: {
 export function kalanMiktar(maas: Prisma.Decimal | null, toplamOdeme: Prisma.Decimal | null | undefined) {
   if (maas === null) return null;
   return maas.sub(toplamOdeme ?? 0);
+}
+
+export type MaasKaydi = { ay: Date; maas: Prisma.Decimal | null };
+
+/** Bir ayın sabit maaşı: o ay ya da öncesindeki en son maaş kaydı. `ay` ayın 1'idir (UTC). Kayıt yoksa null. */
+export function aylikMaas(gecmis: MaasKaydi[], ay: Date) {
+  let son: MaasKaydi | undefined;
+  for (const k of gecmis) if (k.ay <= ay && (!son || k.ay > son.ay)) son = k;
+  return son?.maas ?? null;
+}
+
+/** Toplam hak ediş: ilk maaş ayından `sonAy` dahil her ayın sabit maaşının toplamı. Maaş kaydı yoksa null. */
+export function toplamHakedis(gecmis: MaasKaydi[], sonAy: Date) {
+  if (gecmis.length === 0) return null;
+  const ilk = gecmis.reduce((a, k) => (k.ay < a ? k.ay : a), gecmis[0].ay);
+  let toplam = new Prisma.Decimal(0);
+  for (let ay = ilk; ay <= sonAy; ay = new Date(Date.UTC(ay.getUTCFullYear(), ay.getUTCMonth() + 1, 1))) {
+    toplam = toplam.add(aylikMaas(gecmis, ay) ?? 0);
+  }
+  return toplam;
 }

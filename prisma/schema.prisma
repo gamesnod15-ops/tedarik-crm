@@ -212,16 +212,31 @@ model Personel {
   departman      String?
   telefon        String?
   iseGirisTarihi DateTime?     @db.Date
-  maas           Decimal?      @db.Decimal(14, 2) // yalnızca bilgi: hiçbir hesaplamaya katılmaz
+  maas           Decimal?      @db.Decimal(14, 2) // güncel sabit maaş; aylara göre değer PersonelMaas'tan okunur
   aciklama       String?       @db.Text
   durum          PersonelDurum @default(AKTIF)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  hareketler PersonelHareket[]
-  odemeler   PersonelOdeme[]
+  hareketler  PersonelHareket[]
+  odemeler    PersonelOdeme[]
+  maasGecmisi PersonelMaas[]
 
   @@index([durum])
+}
+
+/// Sabit maaş geçmişi: her kayıt "bu aydan itibaren maaş" demektir. Bir ayın maaşı, o ay ya da öncesindeki en son kayıttır.
+/// Maaş değişince yeni kayıt açılır; önceki aylar eski maaşla kalır. Yalnızca bilgi: finans, bakiye ve rapor hesaplarına katılmaz.
+model PersonelMaas {
+  id         String   @id @default(cuid())
+  personelId String
+  personel   Personel @relation(fields: [personelId], references: [id], onDelete: Cascade)
+  ay         DateTime @db.Date // ayın 1'i (UTC)
+  maas       Decimal? @db.Decimal(14, 2) // null: o aydan itibaren maaş tanımsız
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([personelId, ay])
 }
 
 // Giriş-çıkış saatleri ve izinler. Saatler "HH:mm" metni olarak tutulur.

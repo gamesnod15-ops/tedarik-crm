@@ -4,14 +4,14 @@ import { AutoForm } from "@/components/auto-form";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
-import { formatDate, formatMoney, parseDateInput, toDateInput } from "@/lib/format";
+import { formatDate, formatMoney, monthStartInput, parseDateInput, toDateInput } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { QueryTabs } from "@/components/query-tabs";
 import { RecordDialog } from "@/components/record-dialog";
 import { UzunMetin } from "@/components/uzun-metin";
 import { DeleteButton } from "@/components/delete-button";
-import { TUR_LABELS, hareketAyrinti, hareketFields, kalanMiktar, personelFields } from "./fields";
+import { TUR_LABELS, aylikMaas, hareketAyrinti, hareketFields, kalanMiktar, personelFields, toplamHakedis } from "./fields";
 import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePersonelAction } from "./actions";
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
@@ -25,7 +25,13 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
     ...(sp.q && { adSoyad: { contains: sp.q } }),
   };
   const [rows, total] = await Promise.all([
-    db.personel.findMany({ where, orderBy: { adSoyad: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    db.personel.findMany({
+      where,
+      orderBy: { adSoyad: "asc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      include: { maasGecmisi: { select: { ay: true, maas: true } } },
+    }),
     db.personel.count({ where }),
   ]);
   // Her personelin seçilen dönemdeki ödemelerinin toplamı (yalnızca bilgi; hiçbir hesaplamaya katılmaz).
@@ -40,6 +46,9 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
     ).map((t) => [t.personelId, t._sum.tutar]),
   );
   const ay = donemKey(donem);
+  // Sabit maaş seçilen ayın maaşıdır (sonradan yapılan değişiklik önceki ayları etkilemez).
+  // "Tüm hareketler"de güncel maaş gösterilir; kalan = toplam hak ediş (ilk maaş ayından bu aya) − tüm ödemeler.
+  const buAy = parseDateInput(monthStartInput())!;
 
   return (
     <>
@@ -66,13 +75,14 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
           <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => {
-              const kalan = kalanMiktar(p.maas, toplamlar.get(p.id));
+              const maas = aylikMaas(p.maasGecmisi, aralik ? aralik.gte : buAy);
+              const kalan = kalanMiktar(aralik ? maas : toplamHakedis(p.maasGecmisi, buAy), toplamlar.get(p.id));
               return (
               <tr key={p.id}>
                 <td className="td">
                   <Link href={`/personel/${p.id}`} className="font-medium text-petrol-700 hover:underline">{p.adSoyad}</Link>
                 </td>
-                <td className="td text-right tabular-nums">{p.maas ? formatMoney(p.maas) : "—"}</td>
+                <td className="td text-right tabular-nums">{maas ? formatMoney(maas) : "—"}</td>
                 <td className="td text-right tabular-nums">{formatMoney(toplamlar.get(p.id) ?? 0)}</td>
                 <td className={`td text-right font-semibold tabular-nums ${kalan?.isNegative() ? "text-red-700" : "text-slate-900"}`}>
                   {kalan ? formatMoney(kalan) : "—"}
