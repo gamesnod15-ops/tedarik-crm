@@ -60,15 +60,16 @@ export default async function PersonelDetayPage({
   const toplam = odemeler.reduce((t, o) => t.add(o.tutar), new Prisma.Decimal(0));
   const son = odemeler[0];
 
-  // Sabit maaş aya göre geçmişten okunur: sonradan değişen maaş önceki ayları etkilemez.
+  // Sabit maaş aya göre geçmişten okunur: sonradan değişen maaş önceki ayları etkilemez, gelecek aylar boş görünür.
   // "Tüm hareketler"de güncel maaş gösterilir; kalan = ilk maaş ayından bu aya kadarki toplam hak ediş − tüm ödemeler.
   const gecmis = personel.maasGecmisi;
   const buAy = parseDateInput(monthStartInput())!;
-  const maas = aylikMaas(gecmis, aralik ? aralik.gte : buAy);
+  const gelecek = aralik !== null && aralik.gte > buAy;
+  const maas = aylikMaas(gecmis, aralik ? aralik.gte : buAy, buAy);
   const hakedis = aylik ? null : toplamHakedis(gecmis, buAy);
   const kalan = aylik ? kalanMiktar(maas, toplam) : kalanMiktar(hakedis, toplam);
   const maasAlt = aylik
-    ? maas ? donemAdi(donem) : gecmis.length ? "Bu ay için maaş tanımlı değil" : "Düzenle'den girilebilir"
+    ? maas ? donemAdi(donem) : gelecek ? "Bu ay henüz başlamadı" : gecmis.length ? "Bu ay için maaş tanımlı değil" : "Düzenle'den girilebilir"
     : hakedis ? `Toplam hak ediş ${formatMoney(hakedis)}` : "Düzenle'den girilebilir";
 
   return (
@@ -116,7 +117,7 @@ export default async function PersonelDetayPage({
         <Kutu
           label="Kalan miktar"
           value={kalan ? formatMoney(kalan.abs()) : "—"}
-          alt={kalan === null ? "Sabit maaş girilmemiş" : kalan.isNegative() ? "Maaştan fazla ödendi" : kalan.isZero() ? "Tamamı ödendi" : aylik ? "Sabit maaş − toplam ödeme" : "Toplam hak ediş − toplam ödeme"}
+          alt={kalan === null ? (gelecek ? "Bu ay henüz başlamadı" : "Sabit maaş girilmemiş") : kalan.isNegative() ? "Maaştan fazla ödendi" : kalan.isZero() ? "Tamamı ödendi" : aylik ? "Sabit maaş − toplam ödeme" : "Toplam hak ediş − toplam ödeme"}
           tone={kalan?.isNegative() ? "text-red-700" : "text-slate-900"}
           vurgu
         />

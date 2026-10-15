@@ -70,8 +70,12 @@ export function kalanMiktar(maas: Prisma.Decimal | null, toplamOdeme: Prisma.Dec
 
 export type MaasKaydi = { ay: Date; maas: Prisma.Decimal | null };
 
-/** Bir ayın sabit maaşı: o ay ya da öncesindeki en son maaş kaydı. `ay` ayın 1'idir (UTC). Kayıt yoksa null. */
-export function aylikMaas(gecmis: MaasKaydi[], ay: Date) {
+/**
+ * Bir ayın sabit maaşı: o ay ya da öncesindeki en son maaş kaydı. `ay` ayın 1'idir (UTC). Kayıt yoksa null.
+ * `buAy` verilirse gelecek aylar için null döner: maaş yalnızca içinde bulunulan aya kadar devreder, yeni ay başlayınca kendiliğinden geçer.
+ */
+export function aylikMaas(gecmis: MaasKaydi[], ay: Date, buAy?: Date) {
+  if (buAy && ay > buAy) return null;
   let son: MaasKaydi | undefined;
   for (const k of gecmis) if (k.ay <= ay && (!son || k.ay > son.ay)) son = k;
   return son?.maas ?? null;

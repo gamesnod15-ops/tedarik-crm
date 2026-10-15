@@ -46,7 +46,7 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
     ).map((t) => [t.personelId, t._sum.tutar]),
   );
   const ay = donemKey(donem);
-  // Sabit maaş seçilen ayın maaşıdır (sonradan yapılan değişiklik önceki ayları etkilemez).
+  // Sabit maaş seçilen ayın maaşıdır (sonradan yapılan değişiklik önceki ayları etkilemez; gelecek aylar boş görünür).
   // "Tüm hareketler"de güncel maaş gösterilir; kalan = toplam hak ediş (ilk maaş ayından bu aya) − tüm ödemeler.
   const buAy = parseDateInput(monthStartInput())!;
 
@@ -75,7 +75,7 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
           <tbody className="divide-y divide-slate-200">
             {rows.length === 0 && <tr><td colSpan={6} className="td py-8 text-center text-slate-400">Kayıt bulunamadı.</td></tr>}
             {rows.map((p) => {
-              const maas = aylikMaas(p.maasGecmisi, aralik ? aralik.gte : buAy);
+              const maas = aylikMaas(p.maasGecmisi, aralik ? aralik.gte : buAy, buAy);
               const kalan = kalanMiktar(aralik ? maas : toplamHakedis(p.maasGecmisi, buAy), toplamlar.get(p.id));
               return (
               <tr key={p.id}>
