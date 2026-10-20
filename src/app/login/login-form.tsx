@@ -4,16 +4,20 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 
 // Giriş, Server Action yerine NextAuth'un istemci signIn'i ile /api/auth/callback/credentials'a gider.
-// Neden: cPanel/Passenger, Server Action'ın başarılı giriş sonrası ürettiği 303+RSC yönlendirme cevabını
-// geri gönderemiyor (istek donuyor → 504 → "An unexpected response was received from the server").
-// redirect:false ile cevabı alıp yönlendirmeyi kendimiz yapıyoruz; böylece o yoldan hiç geçilmiyor.
+// Neden: cPanel/Passenger'da Next.js'in Server Action sonrası yaptigi ic HTTP cagrisi zaman asimina ugruyor
+// (UND_ERR_HEADERS_TIMEOUT -> "failed to get redirect response"); istek donuyor, 504 veriyordu.
+// redirect:false ile cevabi istemcide alip yonlendirmeyi kendimiz yapiyoruz; o yoldan hic gecilmiyor.
+// Ayrica her adim ve zamanlama ekranda gosterilir, sessizce beklenmez.
 function safeCallback(url: string) {
   return url.startsWith("/") && !url.startsWith("//") ? url : "/";
 }
 
+type Satir = { t: string; ok?: boolean };
+
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [adimlar, setAdimlar] = useState<Satir[]>([]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,17 +30,38 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     const password = String(form.get("password") ?? "");
     const remember = form.get("remember") === "on" ? "on" : "";
 
+    const t0 = Date.now();
+    const ms = () => `${Date.now() - t0} ms`;
+    const log: Satir[] = [];
+    const yaz = (t: string, ok?: boolean) => {
+      log.push({ t: `${t} (${ms()})`, ok });
+      setAdimlar([...log]);
+    };
+
+    yaz("Giriş isteği gönderiliyor…");
+
     try {
-      const res = await signIn("credentials", { email, password, remember, redirect: false });
+      // 25 sn icinde cevap gelmezse sonsuza kadar beklemeyiz.
+      const zamanAsimi = new Promise<never>((_, red) =>
+        setTimeout(() => red(new Error("İstek 25 sn içinde yanıt vermedi (sunucu takıldı).")), 25_000),
+      );
+      const istek = signIn("credentials", { email, password, remember, redirect: false });
+      const res = (await Promise.race([istek, zamanAsimi])) as Awaited<typeof istek>;
+
       if (res?.error) {
+        yaz(`Sunucu yanıtı: BAŞARISIZ — ${res.error}`, false);
         setError("E-posta veya şifre hatalı ya da hesap geçici olarak kilitli/pasif.");
         setPending(false);
         return;
       }
-      // Oturum çerezi yazıldı; panele tam sayfa geçiş yapılır (çerez bir sonraki istekte okunur).
+
+      yaz("Sunucu yanıtı: BAŞARILI, oturum açıldı", true);
+      yaz("Panele yönlendiriliyor…", true);
       window.location.href = safeCallback(callbackUrl);
-    } catch {
-      setError("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+    } catch (err) {
+      const mesaj = err instanceof Error ? err.message : String(err);
+      yaz(`HATA: ${mesaj}`, false);
+      setError(`Giriş tamamlanamadı: ${mesaj}`);
       setPending(false);
     }
   }
@@ -59,6 +84,16 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
+      )}
+      {adimlar.length > 0 && (
+        <ul className="space-y-1 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          {adimlar.map((s, i) => (
+            <li key={i} className={s.ok === false ? "text-red-600" : s.ok ? "text-green-600" : ""}>
+              {s.ok === false ? "✖ " : s.ok ? "✔ " : "• "}
+              {s.t}
+            </li>
+          ))}
+        </ul>
       )}
       <button type="submit" disabled={pending} className="btn-primary w-full">
         {pending ? "Giriş yapılıyor…" : "Giriş yap"}
