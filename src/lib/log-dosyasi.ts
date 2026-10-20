@@ -11,8 +11,14 @@ const MAX_BOYUT = 5 * 1024 * 1024; // Bu boyutu aşan günlük, başlangıçta .
  * Dosya: LOG_FILE ortam değişkeni, yoksa Passenger'da uygulama kökünün yanındaki logs/app.log (~/tusbacrm/logs/app.log).
  */
 export function ciktiyiDosyayaYonlendir() {
-  const passenger = !!(process.env.IN_PASSENGER || process.env.PASSENGER_APP_ENV);
-  const dosya = process.env.LOG_FILE || (passenger ? path.resolve(process.cwd(), "..", "logs", "app.log") : "");
+  // Çıktı bir terminale bağlı değilse (Passenger uygulamayı böyle çalıştırır) kimse okumuyor demektir:
+  // dolan boru süreci kilitler. Ortam değişkenine güvenmek yerine doğrudan bunu ölçüyoruz.
+  // Yol: HOME tabanlı mutlak konum (çalışma dizini Passenger'da öngörülemez olduğu için ../ kullanmayız).
+  const uretim = process.env.NODE_ENV === "production";
+  const boruYaziliyor = !process.stdout.isTTY;
+  const home = process.env.HOME || process.env.HOMEDIR || process.env.USERPROFILE || "";
+  const varsayilan = uretim && boruYaziliyor && home ? path.join(home, "tusbacrm", "logs", "app.log") : "";
+  const dosya = process.env.LOG_FILE || varsayilan;
   if (!dosya) return;
 
   try {
