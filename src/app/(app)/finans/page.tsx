@@ -16,8 +16,10 @@ import { TekrarlayanBolumu } from "./tekrarlayan";
 import { ISLEM_TIPI_LABELS, ODEME_SEKLI_LABELS, masrafFields, odemeFields } from "./fields";
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
+import { AySecici } from "@/components/ay-secici";
+import { donemAraligi, donemKey, parseDonem, type Donem } from "@/lib/ekstre";
 
-type SP = { tip?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string; yeni?: string };
+type SP = { tip?: string; ay?: string; from?: string; to?: string; q?: string; cariTipi?: string; islem?: string; page?: string; yeni?: string };
 
 function Total({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -42,7 +44,7 @@ function DateFilters({ sp, tip }: { sp: SP; tip: string }) {
 }
 
 // ── Tahsilat / Ödeme ──
-type BolumProps = { sp: SP; page: number; tarih?: Prisma.DateTimeFilter; canWrite: boolean; hasFilter: boolean; baslik: React.ReactNode };
+type BolumProps = { sp: SP; page: number; tarih?: Prisma.DateTimeFilter; donem?: Donem; canWrite: boolean; hasFilter: boolean; baslik: React.ReactNode };
 
 async function OdemeBolumu(p: BolumProps) {
   const where: Prisma.OdemeWhereInput = {
@@ -93,13 +95,16 @@ async function OdemeBolumu(p: BolumProps) {
         <Total label="Ödeme toplamı" value={formatMoney(odeme)} tone="text-red-700" />
       </div>
 
+      {p.donem && <AySecici base="/finans" donem={p.donem} params={{ tip: "ODEME", q: p.sp.q, cariTipi: p.sp.cariTipi, islem: p.sp.islem }} />}
+
       <AutoForm className="toolbar">
-        <DateFilters sp={p.sp} tip="ODEME" />
+        <input type="hidden" name="tip" value="ODEME" />
+        {p.donem && <input type="hidden" name="ay" value={donemKey(p.donem)} />}
         <SegmentFilter name="cariTipi" label="Cari tipi" value={p.sp.cariTipi} options={[{ value: "MUSTERI", label: "Müşteri" }, { value: "TEDARIKCI", label: "Tedarikçi" }]} />
         <SegmentFilter name="islem" label="İşlem tipi" value={p.sp.islem} options={[{ value: "TAHSILAT", label: "Tahsilat" }, { value: "ODEME", label: "Ödeme" }]} />
         <SearchInput defaultValue={p.sp.q ?? ""} placeholder="Cari unvanı" className="w-64" />
         <button className="sr-only">Filtrele</button>
-        {p.hasFilter && <Link href="?tip=ODEME" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+        {p.hasFilter && <Link href={`?tip=ODEME${p.donem ? `&ay=${donemKey(p.donem)}` : ""}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
@@ -162,7 +167,7 @@ async function OdemeBolumu(p: BolumProps) {
         </table>
         <MobileTables />
       </div>
-      <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "ODEME", from: p.sp.from, to: p.sp.to, q: p.sp.q, cariTipi: p.sp.cariTipi, islem: p.sp.islem }} />
+      <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "ODEME", ay: p.donem ? donemKey(p.donem) : undefined, q: p.sp.q, cariTipi: p.sp.cariTipi, islem: p.sp.islem }} />
     </>
   );
 }
@@ -271,10 +276,14 @@ export default async function FinansPage({ searchParams }: { searchParams: Promi
   const page = pageOf(sp.page);
   const canWrite = can(user, "finans:write");
 
+  // Tahsilat / Ödeme listesi ay seçici kullanır (varsayılan: tüm hareketler); Masraflar eski tarih aralığı filtresinde kalır.
+  const donem = tip === "ODEME" ? parseDonem(sp.ay, "TUM") : undefined;
   const from = parseDateInput(sp.from);
   const to = parseDateInput(sp.to);
-  const tarih: Prisma.DateTimeFilter | undefined = from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
-  const hasFilter = !!(sp.from || sp.to || sp.q || sp.cariTipi || sp.islem);
+  const tarih: Prisma.DateTimeFilter | undefined = donem
+    ? donemAraligi(donem) ?? undefined
+    : from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
+  const hasFilter = !!((donem ? false : sp.from || sp.to) || sp.q || sp.cariTipi || sp.islem);
   // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için başlık satırını bölümler oluşturur.
   const baslik = (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -293,7 +302,7 @@ export default async function FinansPage({ searchParams }: { searchParams: Promi
     <div className="space-y-3">
 
       {tip === "ODEME" ? (
-        <OdemeBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
+        <OdemeBolumu sp={sp} page={page} tarih={tarih} donem={donem} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       ) : (
         <MasrafBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       )}
