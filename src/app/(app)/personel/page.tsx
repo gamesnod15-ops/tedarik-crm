@@ -16,7 +16,7 @@ import { deleteHareketAction, deletePersonelAction, saveHareketAction, savePerso
 import { SegmentFilter } from "@/components/segment-filter";
 import { MobileTables } from "@/components/mobile-tables";
 import { AySecici } from "@/components/ay-secici";
-import { donemAdi, donemAraligi, donemKey, parseDonem, type Donem } from "@/lib/ekstre";
+import { donemAdi, donemAraligi, donemKesisim, donemKey, parseDonem, type Donem } from "@/lib/ekstre";
 
 type SP = { tip?: string; q?: string; durum?: string; personel?: string; tur?: string; from?: string; to?: string; ay?: string; page?: string };
 
@@ -119,12 +119,14 @@ async function PersonelKartlari({ sp, page, canWrite, donem }: { sp: SP; page: n
 }
 
 async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: number; canWrite: boolean; baslik: React.ReactNode }) {
-  const from = parseDateInput(sp.from);
-  const to = parseDateInput(sp.to);
+  // Ay seçici kartlarla aynı; varsayılan "Tüm hareketler" (eski kayıtlar gizlenmesin).
+  const donem = parseDonem(sp.ay, "TUM");
+  const aralik = donemAraligi(donem);
+  const ay = donemKey(donem);
   const where: Prisma.PersonelHareketWhereInput = {
     ...(sp.personel && { personelId: sp.personel }),
     ...((sp.tur === "GIRIS_CIKIS" || sp.tur === "IZIN") && { islemTuru: sp.tur }),
-    ...((from || to) && { tarih: { ...(from && { gte: from }), ...(to && { lte: to }) } }),
+    ...(aralik && { OR: [{ tarih: aralik }, { islemTuru: "IZIN" as const, ...donemKesisim(donem)! }] }),
   };
   const [rows, total, personeller] = await Promise.all([
     db.personelHareket.findMany({
@@ -139,7 +141,7 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
   ]);
   const options = personeller.map((p) => ({ value: p.id, label: `${p.adSoyad}${p.durum === "PASIF" ? " – pasif" : ""}` }));
   const fields = hareketFields(options);
-  const hasFilter = !!(sp.personel || sp.tur || sp.from || sp.to);
+  const hasFilter = !!(sp.personel || sp.tur);
 
   return (
     <>
@@ -156,6 +158,8 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
         )}
       </header>
 
+      <AySecici base="/personel" donem={donem} params={{ tip: "HAREKET", personel: sp.personel, tur: sp.tur }} />
+
       <AutoForm className="toolbar">
         <input type="hidden" name="tip" value="HAREKET" />
         <div className="min-w-48">
@@ -166,14 +170,9 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
           </select>
         </div>
         <SegmentFilter name="tur" label="Tür" value={sp.tur} options={[{ value: "GIRIS_CIKIS", label: "Giriş / Çıkış" }, { value: "IZIN", label: "İzin" }]} />
-        <div>
-          <label className="label" htmlFor="from">Tarih</label>
-          <input id="from" name="from" type="date" defaultValue={sp.from} aria-label="Başlangıç tarihi" className="input" />
-          <span aria-hidden="true" className="text-slate-400">–</span>
-          <input id="to" name="to" type="date" defaultValue={sp.to} aria-label="Bitiş tarihi" className="input" />
-        </div>
+        <input type="hidden" name="ay" value={ay} />
         <button className="sr-only">Filtrele</button>
-        {hasFilter && <Link href="?tip=HAREKET" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+        {hasFilter && <Link href={`?tip=HAREKET&ay=${ay}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
@@ -233,7 +232,7 @@ async function IsHareketleri({ sp, page, canWrite, baslik }: { sp: SP; page: num
         </table>
         <MobileTables />
       </div>
-      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "HAREKET", personel: sp.personel, tur: sp.tur, from: sp.from, to: sp.to }} />
+      <Pager page={page} total={total} pageSize={PAGE_SIZE} params={{ tip: "HAREKET", personel: sp.personel, tur: sp.tur, ay }} />
     </>
   );
 }

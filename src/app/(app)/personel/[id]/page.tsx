@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
 import { formatDate, formatMoney, monthStartInput, parseDateInput, toDateInput } from "@/lib/format";
-import { donemAdi, donemAraligi, parseDonem } from "@/lib/ekstre";
+import { donemAdi, donemAraligi, donemKesisim, parseDonem } from "@/lib/ekstre";
 import { AySecici } from "@/components/ay-secici";
 import { RecordDialog } from "@/components/record-dialog";
 import { DeleteButton } from "@/components/delete-button";
@@ -14,6 +14,11 @@ import { TUR_LABELS, aylikMaas, hareketAyrinti, kalanMiktar, odemeFields, person
 import { deletePersonelOdemeAction, savePersonelAction, savePersonelOdemeAction } from "../actions";
 
 const SON_HAREKET = 10;
+
+// Seçilen ayda yapılan hareketler + o aya sarkan izinler (başlangıcı önceki ayda olsa bile).
+const hareketAyFiltresi = (donem: ReturnType<typeof parseDonem>) => ({
+  OR: [{ tarih: donemAraligi(donem)! }, { islemTuru: "IZIN" as const, ...donemKesisim(donem)! }],
+});
 
 function Kutu({ label, value, alt, tone = "text-slate-900", vurgu = false }: { label: string; value: string; alt?: string; tone?: string; vurgu?: boolean }) {
   return (
@@ -47,7 +52,7 @@ export default async function PersonelDetayPage({
     include: {
       odemeler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }] },
       // Ay seçiliyken o ayın tüm hareketleri, "Tüm hareketler"de son birkaç hareket gösterilir.
-      hareketler: { where: aralik ? { tarih: aralik } : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: aylik ? undefined : SON_HAREKET },
+      hareketler: { where: aralik ? hareketAyFiltresi(donem) : undefined, orderBy: [{ tarih: "desc" }, { createdAt: "desc" }], take: aylik ? undefined : SON_HAREKET },
       maasGecmisi: { select: { ay: true, maas: true } },
       _count: { select: { hareketler: true } },
     },
