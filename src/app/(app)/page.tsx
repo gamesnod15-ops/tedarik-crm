@@ -7,6 +7,8 @@ import { formatDate, formatMoney, monthStartInput, parseDateInput, todayInput } 
 import { ISLEM_TIPI_LABELS } from "./finans/fields";
 import { MobileTables } from "@/components/mobile-tables";
 import { GizliRakamProvider, GozButonu, Rakam } from "@/components/gizli-rakam";
+import { AySecici } from "@/components/ay-secici";
+import { donemAdi, parseDonem } from "@/lib/ekstre";
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
@@ -17,7 +19,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
   );
 }
 
-export default async function OzetPage() {
+export default async function OzetPage({ searchParams }: { searchParams: Promise<{ ay?: string }> }) {
   const user = await requireUser();
 
   if (!can(user, "raporlar:read")) {
@@ -29,8 +31,19 @@ export default async function OzetPage() {
     );
   }
 
-  const from = parseDateInput(monthStartInput())!;
-  const to = parseDateInput(todayInput())!;
+  // Üstteki rakamlar seçilen aya göre hesaplanır (varsayılan: bu ay, bugüne kadar). Cari bakiyeleri her zaman güncel durumdur.
+  const donem = parseDonem((await searchParams).ay, "AY");
+  const bugun = parseDateInput(todayInput())!;
+  let from: Date;
+  let to: Date;
+  if (donem.tip === "AY") {
+    from = new Date(Date.UTC(donem.yil, donem.ay - 1, 1));
+    const aySonu = new Date(Date.UTC(donem.yil, donem.ay, 0));
+    to = from.getTime() === parseDateInput(monthStartInput())!.getTime() ? bugun : aySonu;
+  } else {
+    from = new Date(Date.UTC(2000, 0, 1));
+    to = bugun;
+  }
 
   const [ozet, cariler, sonSiparisler, sonAlimlar, sonOdemeler, acik, vadesiGecenler] = await Promise.all([
     getOzet(from, to),
@@ -68,10 +81,12 @@ export default async function OzetPage() {
         <header className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">Özet</h1>
-            <p className="mt-0.5 text-sm text-slate-500">Bu ay ({formatDate(from)} – {formatDate(to)}) ve güncel cari durumu.</p>
+            <p className="mt-0.5 text-sm text-slate-500">{donemAdi(donem)} ({formatDate(from)} – {formatDate(to)}) ve güncel cari durumu.</p>
           </div>
           <GozButonu className="btn-secondary px-3" />
         </header>
+
+        <AySecici base="/" donem={donem} />
 
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Stat label="Aylık ciro" value={formatMoney(ozet.ciro)} />
