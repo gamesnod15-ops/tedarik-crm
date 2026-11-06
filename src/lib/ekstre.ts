@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
+import { todayInput } from "./format";
 import { kalemAra, kalemToplam, odemeEtkisi } from "./finance";
 
 const D = (v: Prisma.Decimal | number | string) => new Prisma.Decimal(v);
@@ -29,8 +30,9 @@ export function parseDonem(raw: string | undefined, varsayilan: "TUM" | "AY"): D
   const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(raw ?? "");
   if (m) return { tip: "AY", yil: Number(m[1]), ay: Number(m[2]) };
   if (varsayilan === "TUM") return { tip: "TUM" };
-  const now = new Date();
-  return { tip: "AY", yil: now.getUTCFullYear(), ay: now.getUTCMonth() + 1 };
+  // "Bu ay" uygulamanın saat dilimine göre bulunur (UTC ile ayın 1'inde gece yarısından sonra bir önceki ay açılıyordu).
+  const [yil, ay] = todayInput().split("-").map(Number);
+  return { tip: "AY", yil, ay };
 }
 
 export const donemKey = (d: Donem) => (d.tip === "TUM" ? "tum" : `${d.yil}-${String(d.ay).padStart(2, "0")}`);
@@ -44,6 +46,12 @@ const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temm
 export const donemAdi = (d: Donem) => (d.tip === "TUM" ? "Tüm hareketler" : `${AY_ADLARI[d.ay - 1]} ${d.yil}`);
 
 /** Aylık dönemin tarih aralığı (Prisma filtresi olarak): başlangıç dahil, sonraki ayın ilk günü hariç. Tüm hareketlerde null. */
+/** Ayı aşan kayıtlar (izin) için: [başlangıç, bitiş] aralığı döneme değiyorsa true koşulu. */
+export const donemKesisim = (d: Donem) => {
+  const a = donemAraligi(d);
+  return a ? { izinBaslangic: { lt: a.lt }, izinBitis: { gte: a.gte } } : null;
+};
+
 export const donemAraligi = (d: Donem) =>
   d.tip === "AY" ? { gte: new Date(Date.UTC(d.yil, d.ay - 1, 1)), lt: new Date(Date.UTC(d.yil, d.ay, 1)) } : null;
 
