@@ -4,7 +4,7 @@ import { AutoForm } from "@/components/auto-form";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { can, requireUser } from "@/lib/session";
-import { formatDate, formatMoney, parseDateInput, toDateInput } from "@/lib/format";
+import { formatDate, formatMoney, toDateInput } from "@/lib/format";
 import { PAGE_SIZE, pageOf } from "@/lib/crud";
 import { Pager } from "@/components/pager";
 import { QueryTabs } from "@/components/query-tabs";
@@ -26,20 +26,6 @@ function Total({ label, value, tone }: { label: string; value: string; tone?: st
     <p className="text-sm text-slate-500">
       {label}: <span className={`text-base font-semibold tabular-nums ${tone ?? "text-slate-900"}`}>{value}</span>
     </p>
-  );
-}
-
-function DateFilters({ sp, tip }: { sp: SP; tip: string }) {
-  return (
-    <>
-      <input type="hidden" name="tip" value={tip} />
-      <div>
-        <label className="label" htmlFor="from">Tarih</label>
-        <input id="from" name="from" type="date" defaultValue={sp.from} aria-label="Başlangıç tarihi" className="input" />
-        <span aria-hidden="true" className="text-slate-400">–</span>
-        <input id="to" name="to" type="date" defaultValue={sp.to} aria-label="Bitiş tarihi" className="input" />
-      </div>
-    </>
   );
 }
 
@@ -207,11 +193,14 @@ async function MasrafBolumu(p: BolumProps) {
 
       <Total label="Masraf toplamı" value={formatMoney(sum._sum.tutar ?? 0)} tone="text-red-700" />
 
+      {p.donem && <AySecici base="/finans" donem={p.donem} params={{ tip: "MASRAF", q: p.sp.q }} />}
+
       <AutoForm className="toolbar">
-        <DateFilters sp={p.sp} tip="MASRAF" />
+        <input type="hidden" name="tip" value="MASRAF" />
+        {p.donem && <input type="hidden" name="ay" value={donemKey(p.donem)} />}
         <SearchInput defaultValue={p.sp.q ?? ""} placeholder="Açıklama veya kategori" className="w-72" />
         <button className="sr-only">Filtrele</button>
-        {p.hasFilter && <Link href="?tip=MASRAF" className="text-sm text-slate-500 hover:underline">Temizle</Link>}
+        {p.hasFilter && <Link href={`?tip=MASRAF${p.donem ? `&ay=${donemKey(p.donem)}` : ""}`} className="text-sm text-slate-500 hover:underline">Temizle</Link>}
       </AutoForm>
 
       <div className="card overflow-x-auto">
@@ -263,7 +252,7 @@ async function MasrafBolumu(p: BolumProps) {
         </table>
         <MobileTables />
       </div>
-      <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "MASRAF", from: p.sp.from, to: p.sp.to, q: p.sp.q }} />
+      <Pager page={p.page} total={total} pageSize={PAGE_SIZE} params={{ tip: "MASRAF", ay: p.donem ? donemKey(p.donem) : undefined, q: p.sp.q }} />
         <TekrarlayanBolumu canWrite={p.canWrite} />
     </>
   );
@@ -276,14 +265,10 @@ export default async function FinansPage({ searchParams }: { searchParams: Promi
   const page = pageOf(sp.page);
   const canWrite = can(user, "finans:write");
 
-  // Tahsilat / Ödeme listesi ay seçici kullanır (varsayılan: tüm hareketler); Masraflar eski tarih aralığı filtresinde kalır.
-  const donem = tip === "ODEME" ? parseDonem(sp.ay, "TUM") : undefined;
-  const from = parseDateInput(sp.from);
-  const to = parseDateInput(sp.to);
-  const tarih: Prisma.DateTimeFilter | undefined = donem
-    ? donemAraligi(donem) ?? undefined
-    : from || to ? { ...(from && { gte: from }), ...(to && { lte: to }) } : undefined;
-  const hasFilter = !!((donem ? false : sp.from || sp.to) || sp.q || sp.cariTipi || sp.islem);
+  // Her iki sekme de ay seçici kullanır (varsayılan: tüm hareketler).
+  const donem = parseDonem(sp.ay, "TUM");
+  const tarih: Prisma.DateTimeFilter | undefined = donemAraligi(donem) ?? undefined;
+  const hasFilter = !!(sp.q || sp.cariTipi || sp.islem);
   // Başlık + sekmeler; "Yeni …" butonu sekmeye göre değiştiği için başlık satırını bölümler oluşturur.
   const baslik = (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -304,7 +289,7 @@ export default async function FinansPage({ searchParams }: { searchParams: Promi
       {tip === "ODEME" ? (
         <OdemeBolumu sp={sp} page={page} tarih={tarih} donem={donem} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       ) : (
-        <MasrafBolumu sp={sp} page={page} tarih={tarih} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
+        <MasrafBolumu sp={sp} page={page} tarih={tarih} donem={donem} canWrite={canWrite} hasFilter={hasFilter} baslik={baslik} />
       )}
     </div>
   );
